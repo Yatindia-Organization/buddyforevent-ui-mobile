@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, TextInput, Button, FlatList, SafeAreaView, ScrollView } from 'react-native';
+import { Alert, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import DraggableFlatList from 'react-native-draggable-flatlist';
 import { useGlobalInfo } from '../../context/GlobalContext';
-import { getDefaultFieldSchema } from '../../lib/config/getDefaultFieldSchema';
 import { API_ROUTE } from '../../lib/config';
+import { getDefaultFieldSchema } from '../../lib/config/getDefaultFieldSchema';
 
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import DraggableField from '../DraggableField';
 import FieldSettings from '../FieldSettings';
 import ToolboxField from '../ToolboxField';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 const FIELD_TYPES = [
     { type: 'Input Field', icon: '🔤' },
@@ -40,7 +40,7 @@ export default function FormBuilder() {
         setFields(data);
     };
 
-    const handleSaveField = (updatedField) => {
+    const handleSaveField = (updatedField: any) => {
         setFields(fields?.map(f => (f.id === updatedField.id ? updatedField : f)));
         setEditingId(null);
     };
@@ -112,66 +112,86 @@ export default function FormBuilder() {
     return (
         <SafeAreaProvider>
             <SafeAreaView style={styles.container}>
-                <ScrollView>
-                    <Text style={styles.note}>
-                        Please note that participants will receive email, SMS, and WhatsApp messages after registration.
-                    </Text>
+                <View>
+                    <DraggableFlatList
+                        data={fields}
+                        renderItem={renderItem}
+                        keyExtractor={(item) => item.id}
+                        onDragEnd={handleReorder}
+                        ListHeaderComponent={
+                            <>
+                                <Text style={styles.note}>
+                                    Participants will receive email, SMS, and WhatsApp after registration.
+                                </Text>
 
-                    {/* Toolbox */}
-                    <Text style={styles.header}>Add New Field</Text>
-                    <View style={styles.toolbox}>
-                        {FIELD_TYPES.map(({ type, icon }) => (
-                            <ToolboxField
-                                key={type}
-                                type={type}
-                                icon={icon}
-                                onPress={() => handleAddField(type)}
-                            />
-                        ))}
-                    </View>
+                                {/* Toolbox */}
+                                <Text style={styles.header}>Add New Field</Text>
+                                <View style={styles.toolbox}>
+                                    {FIELD_TYPES.map(({ type, icon }) => (
+                                        <ToolboxField
+                                            key={type}
+                                            type={type}
+                                            icon={icon}
+                                            onPress={() => handleAddField(type)}
+                                        />
+                                    ))}
+                                </View>
 
-                    {/* Form Designer */}
-                    <Text style={styles.header}>Form Designer</Text>
-                    {fields.length === 0 ? (
-                        <Text style={styles.emptyText}>Tap fields above to build your form</Text>
-                    ) : (
-                        <DraggableFlatList
-                            data={fields}
-                            renderItem={renderItem}
-                            keyExtractor={(item) => item.id}
-                            onDragEnd={handleReorder}
-                        />
-                    )}
+                                {/* Form Designer label */}
+                                <Text style={styles.header}>Form Designer</Text>
+                                {fields.length === 0 && (
+                                    <Text style={styles.emptyText}>
+                                        Tap fields above to build your form
+                                    </Text>
+                                )}
+                            </>
+                        }
+                        ListFooterComponent={
+                            fields.length > 0 && (
+                                <>
+                                    {/* Proceed / Cancel */}
+                                    <View style={styles.buttonRow}>
+                                        <TouchableOpacity
+                                            style={styles.proceedButton}
+                                            onPress={handleProceed}
+                                        >
+                                            <Text style={styles.buttonText}>Proceed</Text>
+                                        </TouchableOpacity>
+                                        <TouchableOpacity
+                                            style={styles.cancelButton}
+                                            onPress={handleCancel}
+                                        >
+                                            <Text style={styles.buttonText}>Cancel</Text>
+                                        </TouchableOpacity>
+                                    </View>
 
-                    {/* Proceed / Cancel Buttons */}
-                    {fields.length > 0 && (
-                        <View style={styles.buttonRow}>
-                            <TouchableOpacity style={styles.proceedButton} onPress={handleProceed}>
-                                <Text style={styles.buttonText}>Proceed</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
-                                <Text style={styles.buttonText}>Cancel</Text>
-                            </TouchableOpacity>
-                        </View>
-                    )}
+                                    {/* optional JSON preview */}
+                                    {Array.isArray(finalSchema) && finalSchema.length > 0 && (
+                                        <View style={styles.jsonContainer}>
+                                            <Text style={styles.header}>
+                                                Final JSON Schema (In Order)
+                                            </Text>
+                                            <View style={styles.jsonBox}>
+                                                <Text style={styles.jsonText}>
+                                                    {JSON.stringify(finalSchema, null, 2)}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                    )}
+                                </>
+                            )
+                        }
+                        contentContainerStyle={{ paddingBottom: 32 }}   
+                    />
 
-                    {/* Final JSON Schema Display */}
-                    {Array.isArray(finalSchema) && finalSchema.length > 0 && (
-                        <View style={styles.jsonContainer}>
-                            <Text style={styles.header}>Final JSON Schema (In Order)</Text>
-                            <ScrollView style={styles.jsonBox}>
-                                <Text style={styles.jsonText}>{JSON.stringify(finalSchema, null, 2)}</Text>
-                            </ScrollView>
-                        </View>
-                    )}
-                </ScrollView>
+                </View>
             </SafeAreaView>
         </SafeAreaProvider>
     );
 }
 
 const styles = StyleSheet.create({
-    container: { minHeight: 780, flex: 1, padding: 16 },
+    container: { minHeight: 540, flex: 1, padding: 16 },
     note: { color: '#E36A6C', marginBottom: 8 },
     header: { fontSize: 18, fontWeight: 'bold', marginVertical: 8 },
     toolbox: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 16 },

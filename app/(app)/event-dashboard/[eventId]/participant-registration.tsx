@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import TicketRegistrationForm from '../../../ticket-registration';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import FormBuilder from '../../../../components/dynamic-form';
+import TicketRegistrationForm from '../../../ticket-registration';
 
 const ParticipantRegistration: React.FC = () => {
     const [formType, setFormType] = useState<'ticket' | 'user'>('ticket');
@@ -54,9 +55,15 @@ const ParticipantRegistration: React.FC = () => {
             </View>
 
             {/* Content */}
-            <View style={styles.contentContainer}>
-                {formType === 'ticket' ? <TicketRegistrationForm /> : <FormBuilder />}
-            </View>
+            <GestureHandlerRootView style={{ flex: 1 }}>
+                <View style={styles.contentContainer}>
+                    {formType === 'ticket' ? (
+                        <TicketRegistrationForm />
+                    ) : (
+                        <FormBuilder />
+                    )}
+                </View>
+            </GestureHandlerRootView>
         </View>
     );
 };

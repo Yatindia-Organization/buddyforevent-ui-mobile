@@ -1,15 +1,13 @@
+import { useRouter } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
-    View,
-    Text,
-    FlatList,
-    StyleSheet,
-    TouchableOpacity,
-    Image,
     ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from "react-native";
 import { useGlobalInfo } from "../../context/GlobalContext";
-import { useRouter } from "expo-router";
 import { API_ROUTE } from "../../lib/config";
 
 
