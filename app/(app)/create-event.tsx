@@ -1,23 +1,23 @@
+import { Colors } from "@/constants/Colors";
+import { API_ROUTE } from "@/lib/config";
+import DateTimePicker from "@react-native-community/datetimepicker";
+import * as ImagePicker from "expo-image-picker";
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    View,
-    Text,
-    TextInput,
-    StyleSheet,
-    TouchableOpacity,
-    ScrollView,
     Image,
     Platform,
+    ScrollView,
+    StyleSheet,
     Switch,
-    Alert,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
 } from "react-native";
-import DateTimePicker from "@react-native-community/datetimepicker";
-import { useRouter } from "expo-router";
-import * as ImagePicker from "expo-image-picker";
-import { uploadToCloudinary } from "../../lib/utils/cloudinary";
-import { useGlobalInfo } from "../../context/GlobalContext";
 import { Snackbar } from 'react-native-paper';
-import { API_ROUTE } from "@/lib/config";
+import { useGlobalInfo } from "../../context/GlobalContext";
+import { uploadToCloudinary } from "../../lib/utils/cloudinary";
 
 type ImageAsset = {
     uri: string;
@@ -46,7 +46,7 @@ type PickerMode = "start_date" | "end_date" | "start_time" | "end_time" | null;
 
 
 export default function CreateEvent() {
-    const { userId } = useGlobalInfo();
+    const { theme, userId } = useGlobalInfo();
     console.log(userId, "this is the userIds")
     const router = useRouter();
 
@@ -271,33 +271,410 @@ export default function CreateEvent() {
         router.back();
     };
 
+//     return (
+//         <ScrollView
+//             style={styles.container}
+//             contentContainerStyle={{ paddingBottom: 32 }}
+//         >
+//             <Text style={styles.heading}>Create Event</Text>
+
+//             {/* Event Name */}
+//             <TextInput
+//                 style={styles.input}
+//                 placeholder="Event Name *"
+//                 value={formData.name}
+//                 onChangeText={(text) => handleChange("name", text)}
+//             />
+
+//             {/* Location */}
+//             <TextInput
+//                 style={styles.input}
+//                 placeholder="Location *"
+//                 value={formData.location}
+//                 onChangeText={(text) => handleChange("location", text)}
+//             />
+
+//             {/* Description */}
+//             <TextInput
+//                 style={[styles.input, styles.textArea]}
+//                 placeholder="Description *"
+//                 value={formData.description}
+//                 onChangeText={(text) => handleChange("description", text)}
+//                 multiline
+//             />
+
+//             {/* Images */}
+//             <TouchableOpacity
+//                 style={styles.uploadBox}
+//                 onPress={() => handleImagePick("cover_image")}
+//             >
+//                 <Text>Upload Cover Image *</Text>
+//                 {formData.cover_image && (
+//                     <Image
+//                         source={{ uri: formData.cover_image.uri }}
+//                         style={styles.previewImage}
+//                     />
+//                 )}
+//             </TouchableOpacity>
+
+//             <TouchableOpacity
+//                 style={styles.uploadBox}
+//                 onPress={() => handleImagePick("logo_image")}
+//             >
+//                 <Text>Upload Logo Image *</Text>
+//                 {formData.logo_image && (
+//                     <Image
+//                         source={{ uri: formData.logo_image.uri }}
+//                         style={styles.previewImage}
+//                     />
+//                 )}
+//             </TouchableOpacity>
+
+//             {/* Event images  */}
+
+//             <TouchableOpacity
+//                 style={styles.uploadBox}
+//                 onPress={() => handleImagePick("event_images", true)}
+//             >
+//                 <Text>Upload Event Images</Text>
+//                 {formData.event_images.length > 0 && (
+//                     <ScrollView horizontal style={{ marginTop: 8 }}>
+//                         {formData.event_images.map((img, index) => (
+//                             <Image
+//                                 key={index}
+//                                 source={{ uri: img.uri }}
+//                                 style={styles.eventImageThumbnail}
+//                             />
+//                         ))}
+//                     </ScrollView>
+//                 )}
+//             </TouchableOpacity>
+
+//             {/* Date & Time */}
+//             <TouchableOpacity
+//                 style={styles.input}
+//                 onPress={() => showDatePicker("start_date")}
+//             >
+//                 <Text style={styles.inputText}>
+//                     {formData.start_date
+//                         ? `Start Date: ${formatDate(formData.start_date)}`
+//                         : "Select Start Date *"}
+//                 </Text>
+//             </TouchableOpacity>
+
+//             <TouchableOpacity
+//                 style={styles.input}
+//                 onPress={() => showDatePicker("end_date")}
+//             >
+//                 <Text style={styles.inputText}>
+//                     {formData.end_date
+//                         ? `End Date: ${formatDate(formData.end_date)}`
+//                         : "Select End Date *"}
+//                 </Text>
+//             </TouchableOpacity>
+
+//             <TouchableOpacity
+//                 style={styles.input}
+//                 onPress={() => showDatePicker("start_time")}
+//             >
+//                 <Text style={styles.inputText}>
+//                     {formData.start_time
+//                         ? `Start Time: ${formatTime(formData.start_time)}`
+//                         : "Select Start Time *"}
+//                 </Text>
+//             </TouchableOpacity>
+
+//             <TouchableOpacity
+//                 style={styles.input}
+//                 onPress={() => showDatePicker("end_time")}
+//             >
+//                 <Text style={styles.inputText}>
+//                     {formData.end_time
+//                         ? `End Time: ${formatTime(formData.end_time)}`
+//                         : "Select End Time *"}
+//                 </Text>
+//             </TouchableOpacity>
+
+//             {showPicker && Platform.OS === "android" && (
+//                 <DateTimePicker
+//                     value={tempDate}
+//                     mode={pickerMode?.includes("date") ? "date" : "time"}
+//                     is24Hour={true}
+//                     display="default"
+//                     onChange={onDateTimeChange}
+//                 />
+//             )}
+
+//             {Platform.OS === "ios" && iosPickerVisible && (
+//                 <View style={{ backgroundColor: "#fff", padding: 16 }}>
+//                     <DateTimePicker
+//                         value={tempDate}
+//                         mode={pickerMode.includes("date") ? "date" : "time"}
+//                         display="spinner"
+//                         onChange={onDateTimeChange}
+//                         style={{ height: 200 }}
+//                     />
+//                     <TouchableOpacity onPress={handleIOSPickerDone} style={styles.submitButton}>
+//                         <Text style={styles.submitButtonText}>Done</Text>
+//                     </TouchableOpacity>
+//                 </View>
+//             )}
+
+//             {/* Food Tracking */}
+//             <View style={styles.switchRow}>
+//                 <Text style={styles.switchLabel}>Food Tracking *</Text>
+//                 <Switch
+//                     value={formData.food_tracking}
+//                     onValueChange={(val) => handleChange("food_tracking", val)}
+//                 />
+//             </View>
+
+//             {/* Gift Tracking */}
+//             <View style={styles.switchRow}>
+//                 <Text style={styles.switchLabel}>Gift Tracking *</Text>
+//                 <Switch
+//                     value={formData.gift_tracking}
+//                     onValueChange={(val) => handleChange("gift_tracking", val)}
+//                 />
+//             </View>
+
+//             {/* Public / Private */}
+//             <Text style={styles.subHeading}>Event Visibility *</Text>
+//             <View style={styles.radioContainer}>
+//                 {[
+//                     { label: "Public", value: true },
+//                     { label: "Private", value: false },
+//                 ].map((option) => (
+//                     <TouchableOpacity
+//                         key={option.label}
+//                         style={styles.radioRow}
+//                         onPress={() => handleChange("public_event", option.value)}
+//                         activeOpacity={0.7}
+//                     >
+//                         <View
+//                             style={[
+//                                 styles.radioButton,
+//                                 formData.public_event === option.value && styles.radioButtonSelected,
+//                             ]}
+//                         />
+//                         <Text style={styles.radioLabel}>{option.label}</Text>
+//                     </TouchableOpacity>
+//                 ))}
+//             </View>
+
+//             {/* Buttons */}
+//             <View style={styles.buttonContainer}>
+//                 <TouchableOpacity
+//                     style={styles.cancelButton}
+//                     onPress={handleCancel}
+//                 >
+//                     <Text style={styles.cancelButtonText}>Cancel</Text>
+//                 </TouchableOpacity>
+//                 <TouchableOpacity
+//                     style={styles.submitButton}
+//                     onPress={handleSubmit}
+//                 >
+//                     <Text style={styles.submitButtonText}>Submit</Text>
+//                 </TouchableOpacity>
+//             </View>
+
+//             <Snackbar
+//                 visible={snackbar.visible}
+//                 onDismiss={() => setSnackbar({ ...snackbar, visible: false })}
+//                 duration={3000}
+//                 style={{ backgroundColor: snackbar.color }}
+//             >
+//                 {snackbar.message}
+//             </Snackbar>
+
+//         </ScrollView>
+//     );
+// }
+
+// const styles = StyleSheet.create({
+//     container: {
+//         padding: 16,
+//         backgroundColor: "#fff",
+//     },
+//     heading: {
+//         fontSize: 22,
+//         fontWeight: "bold",
+//         marginBottom: 16,
+//     },
+//     subHeading: {
+//         fontSize: 16,
+//         fontWeight: "600",
+//         marginVertical: 8,
+//     },
+//     input: {
+//         borderWidth: 1,
+//         borderColor: "#ccc",
+//         padding: 12,
+//         marginBottom: 12,
+//         borderRadius: 6,
+//     },
+//     inputText: {
+//         color: "#000",
+//     },
+//     textArea: {
+//         height: 100,
+//     },
+//     eventImageThumbnail: {
+//         width: 80,
+//         height: 80,
+//         marginRight: 8,
+//         borderRadius: 6,
+//     },
+//     uploadBox: {
+//         borderWidth: 1,
+//         borderColor: "#aaa",
+//         padding: 12,
+//         borderRadius: 6,
+//         marginBottom: 12,
+//         alignItems: "center",
+//     },
+//     previewImage: {
+//         marginTop: 8,
+//         width: 100,
+//         height: 100,
+//         borderRadius: 6,
+//     },
+//     switchRow: {
+//         flexDirection: "row",
+//         justifyContent: "space-between",
+//         alignItems: "center",
+//         marginBottom: 12,
+//     },
+//     switchLabel: {
+//         fontSize: 16,
+//     },
+//     radioText: {
+//         fontSize: 16,
+//         color: "#333",
+//     },
+//     radioTextSelected: {
+//         color: "#fff",
+//         fontWeight: "bold",
+//     },
+//     buttonContainer: {
+//         flexDirection: "row",
+//         justifyContent: "space-between",
+//         marginTop: 16,
+//     },
+//     cancelButton: {
+//         flex: 1,
+//         borderWidth: 1,
+//         borderColor: "#ccc",
+//         borderRadius: 6,
+//         paddingVertical: 12,
+//         alignItems: "center",
+//         marginRight: 8,
+//     },
+//     cancelButtonText: {
+//         color: "#333",
+//         fontWeight: "600",
+//     },
+//     submitButton: {
+//         flex: 1,
+//         backgroundColor: "#007BFF",
+//         borderRadius: 6,
+//         paddingVertical: 12,
+//         alignItems: "center",
+//         marginLeft: 8,
+//     },
+//     submitButtonText: {
+//         color: "#fff",
+//         fontWeight: "bold",
+//     },
+//     radioContainer: {
+//         flexDirection: "row",
+//         marginBottom: 16,
+//         justifyContent: "space-around",
+//     },
+//     radioRow: {
+//         flexDirection: "row",
+//         alignItems: "center",
+//     },
+//     radioButton: {
+//         width: 24,
+//         height: 24,
+//         borderRadius: 12,
+//         borderWidth: 2,
+//         borderColor: "#ccc",
+//         marginRight: 8,
+//         justifyContent: "center",
+//         alignItems: "center",
+//     },
+//     radioButtonSelected: {
+//         backgroundColor: "#007BFF",
+//         borderColor: "#007BFF",
+//     },
+//     radioLabel: {
+//         fontSize: 16,
+//         color: "#333",
+//     },
+
+// });
+
+
+
+
+// import DateTimePicker from "@react-native-community/datetimepicker";
+// import { useRouter } from "expo-router";
+// import React from "react";
+// import {
+//     Image,
+//     Platform,
+//     ScrollView,
+//     StyleSheet,
+//     Switch,
+//     Text,
+//     TextInput,
+//     TouchableOpacity,
+//     View
+// } from "react-native";
+// import { Snackbar } from 'react-native-paper';
+// import { Colors } from "../../constants/Colors";
+// import { useGlobalInfo } from "../../context/GlobalContext";
+
+// // ... all logic stays the same as your version, except the styles and where you use them ...
+
+// export default function CreateEvent() {
+    const colors = Colors[theme];
+//     const router = useRouter();
+
+    // ... keep all your state and logic ...
+
     return (
         <ScrollView
-            style={styles.container}
+            style={[styles.container, { backgroundColor: colors.background }]}
             contentContainerStyle={{ paddingBottom: 32 }}
         >
-            <Text style={styles.heading}>Create Event</Text>
+            <Text style={[styles.heading, { color: colors.button }]}>Create Event</Text>
 
             {/* Event Name */}
             <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text, backgroundColor: colors.card, borderColor: colors.secondaryText }]}
                 placeholder="Event Name *"
+                placeholderTextColor={colors.secondaryText}
                 value={formData.name}
                 onChangeText={(text) => handleChange("name", text)}
             />
 
             {/* Location */}
             <TextInput
-                style={styles.input}
+                style={[styles.input, { color: colors.text, backgroundColor: colors.card, borderColor: colors.secondaryText }]}
                 placeholder="Location *"
+                placeholderTextColor={colors.secondaryText}
                 value={formData.location}
                 onChangeText={(text) => handleChange("location", text)}
             />
 
             {/* Description */}
             <TextInput
-                style={[styles.input, styles.textArea]}
+                style={[styles.input, styles.textArea, { color: colors.text, backgroundColor: colors.card, borderColor: colors.secondaryText }]}
                 placeholder="Description *"
+                placeholderTextColor={colors.secondaryText}
                 value={formData.description}
                 onChangeText={(text) => handleChange("description", text)}
                 multiline
@@ -305,10 +682,10 @@ export default function CreateEvent() {
 
             {/* Images */}
             <TouchableOpacity
-                style={styles.uploadBox}
+                style={[styles.uploadBox, { borderColor: colors.secondaryText, backgroundColor: colors.dropdownBackground }]}
                 onPress={() => handleImagePick("cover_image")}
             >
-                <Text>Upload Cover Image *</Text>
+                <Text style={{ color: colors.text }}>Upload Cover Image *</Text>
                 {formData.cover_image && (
                     <Image
                         source={{ uri: formData.cover_image.uri }}
@@ -318,10 +695,10 @@ export default function CreateEvent() {
             </TouchableOpacity>
 
             <TouchableOpacity
-                style={styles.uploadBox}
+                style={[styles.uploadBox, { borderColor: colors.secondaryText, backgroundColor: colors.dropdownBackground }]}
                 onPress={() => handleImagePick("logo_image")}
             >
-                <Text>Upload Logo Image *</Text>
+                <Text style={{ color: colors.text }}>Upload Logo Image *</Text>
                 {formData.logo_image && (
                     <Image
                         source={{ uri: formData.logo_image.uri }}
@@ -330,13 +707,12 @@ export default function CreateEvent() {
                 )}
             </TouchableOpacity>
 
-            {/* Event images  */}
-
+            {/* Event images */}
             <TouchableOpacity
-                style={styles.uploadBox}
+                style={[styles.uploadBox, { borderColor: colors.secondaryText, backgroundColor: colors.dropdownBackground }]}
                 onPress={() => handleImagePick("event_images", true)}
             >
-                <Text>Upload Event Images</Text>
+                <Text style={{ color: colors.text }}>Upload Event Images</Text>
                 {formData.event_images.length > 0 && (
                     <ScrollView horizontal style={{ marginTop: 8 }}>
                         {formData.event_images.map((img, index) => (
@@ -352,10 +728,10 @@ export default function CreateEvent() {
 
             {/* Date & Time */}
             <TouchableOpacity
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.secondaryText }]}
                 onPress={() => showDatePicker("start_date")}
             >
-                <Text style={styles.inputText}>
+                <Text style={{ color: colors.text }}>
                     {formData.start_date
                         ? `Start Date: ${formatDate(formData.start_date)}`
                         : "Select Start Date *"}
@@ -363,10 +739,10 @@ export default function CreateEvent() {
             </TouchableOpacity>
 
             <TouchableOpacity
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.secondaryText }]}
                 onPress={() => showDatePicker("end_date")}
             >
-                <Text style={styles.inputText}>
+                <Text style={{ color: colors.text }}>
                     {formData.end_date
                         ? `End Date: ${formatDate(formData.end_date)}`
                         : "Select End Date *"}
@@ -374,10 +750,10 @@ export default function CreateEvent() {
             </TouchableOpacity>
 
             <TouchableOpacity
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.secondaryText }]}
                 onPress={() => showDatePicker("start_time")}
             >
-                <Text style={styles.inputText}>
+                <Text style={{ color: colors.text }}>
                     {formData.start_time
                         ? `Start Time: ${formatTime(formData.start_time)}`
                         : "Select Start Time *"}
@@ -385,10 +761,10 @@ export default function CreateEvent() {
             </TouchableOpacity>
 
             <TouchableOpacity
-                style={styles.input}
+                style={[styles.input, { backgroundColor: colors.card, borderColor: colors.secondaryText }]}
                 onPress={() => showDatePicker("end_time")}
             >
-                <Text style={styles.inputText}>
+                <Text style={{ color: colors.text }}>
                     {formData.end_time
                         ? `End Time: ${formatTime(formData.end_time)}`
                         : "Select End Time *"}
@@ -406,7 +782,7 @@ export default function CreateEvent() {
             )}
 
             {Platform.OS === "ios" && iosPickerVisible && (
-                <View style={{ backgroundColor: "#fff", padding: 16 }}>
+                <View style={[{ backgroundColor: colors.card, padding: 16, borderRadius: 10 }]}>
                     <DateTimePicker
                         value={tempDate}
                         mode={pickerMode.includes("date") ? "date" : "time"}
@@ -414,32 +790,36 @@ export default function CreateEvent() {
                         onChange={onDateTimeChange}
                         style={{ height: 200 }}
                     />
-                    <TouchableOpacity onPress={handleIOSPickerDone} style={styles.submitButton}>
-                        <Text style={styles.submitButtonText}>Done</Text>
+                    <TouchableOpacity onPress={handleIOSPickerDone} style={[styles.submitButton, { backgroundColor: colors.button }]}>
+                        <Text style={[styles.submitButtonText, { color: colors.buttonText }]}>Done</Text>
                     </TouchableOpacity>
                 </View>
             )}
 
             {/* Food Tracking */}
             <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Food Tracking *</Text>
+                <Text style={[styles.switchLabel, { color: colors.text }]}>Food Tracking *</Text>
                 <Switch
                     value={formData.food_tracking}
                     onValueChange={(val) => handleChange("food_tracking", val)}
+                    trackColor={{ false: colors.cancelButton, true: colors.button }}
+                    thumbColor={formData.food_tracking ? colors.button : colors.cancelButton}
                 />
             </View>
 
             {/* Gift Tracking */}
             <View style={styles.switchRow}>
-                <Text style={styles.switchLabel}>Gift Tracking *</Text>
+                <Text style={[styles.switchLabel, { color: colors.text }]}>Gift Tracking *</Text>
                 <Switch
                     value={formData.gift_tracking}
                     onValueChange={(val) => handleChange("gift_tracking", val)}
+                    trackColor={{ false: colors.cancelButton, true: colors.button }}
+                    thumbColor={formData.gift_tracking ? colors.button : colors.cancelButton}
                 />
             </View>
 
             {/* Public / Private */}
-            <Text style={styles.subHeading}>Event Visibility *</Text>
+            <Text style={[styles.subHeading, { color: colors.text }]}>Event Visibility *</Text>
             <View style={styles.radioContainer}>
                 {[
                     { label: "Public", value: true },
@@ -454,10 +834,13 @@ export default function CreateEvent() {
                         <View
                             style={[
                                 styles.radioButton,
-                                formData.public_event === option.value && styles.radioButtonSelected,
+                                {
+                                    borderColor: colors.button,
+                                    backgroundColor: formData.public_event === option.value ? colors.button : 'transparent'
+                                },
                             ]}
                         />
-                        <Text style={styles.radioLabel}>{option.label}</Text>
+                        <Text style={[styles.radioLabel, { color: colors.text }]}>{option.label}</Text>
                     </TouchableOpacity>
                 ))}
             </View>
@@ -465,16 +848,16 @@ export default function CreateEvent() {
             {/* Buttons */}
             <View style={styles.buttonContainer}>
                 <TouchableOpacity
-                    style={styles.cancelButton}
+                    style={[styles.cancelButton, { borderColor: colors.cancelButton }]}
                     onPress={handleCancel}
                 >
-                    <Text style={styles.cancelButtonText}>Cancel</Text>
+                    <Text style={[styles.cancelButtonText, { color: colors.cancelButtonText }]}>Cancel</Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                    style={styles.submitButton}
+                    style={[styles.submitButton, { backgroundColor: colors.button }]}
                     onPress={handleSubmit}
                 >
-                    <Text style={styles.submitButtonText}>Submit</Text>
+                    <Text style={[styles.submitButtonText, { color: colors.buttonText }]}>Submit</Text>
                 </TouchableOpacity>
             </View>
 
@@ -486,7 +869,6 @@ export default function CreateEvent() {
             >
                 {snackbar.message}
             </Snackbar>
-
         </ScrollView>
     );
 }
@@ -494,7 +876,6 @@ export default function CreateEvent() {
 const styles = StyleSheet.create({
     container: {
         padding: 16,
-        backgroundColor: "#fff",
     },
     heading: {
         fontSize: 22,
@@ -508,13 +889,9 @@ const styles = StyleSheet.create({
     },
     input: {
         borderWidth: 1,
-        borderColor: "#ccc",
         padding: 12,
         marginBottom: 12,
         borderRadius: 6,
-    },
-    inputText: {
-        color: "#000",
     },
     textArea: {
         height: 100,
@@ -527,7 +904,6 @@ const styles = StyleSheet.create({
     },
     uploadBox: {
         borderWidth: 1,
-        borderColor: "#aaa",
         padding: 12,
         borderRadius: 6,
         marginBottom: 12,
@@ -548,14 +924,6 @@ const styles = StyleSheet.create({
     switchLabel: {
         fontSize: 16,
     },
-    radioText: {
-        fontSize: 16,
-        color: "#333",
-    },
-    radioTextSelected: {
-        color: "#fff",
-        fontWeight: "bold",
-    },
     buttonContainer: {
         flexDirection: "row",
         justifyContent: "space-between",
@@ -564,26 +932,22 @@ const styles = StyleSheet.create({
     cancelButton: {
         flex: 1,
         borderWidth: 1,
-        borderColor: "#ccc",
         borderRadius: 6,
         paddingVertical: 12,
         alignItems: "center",
         marginRight: 8,
     },
     cancelButtonText: {
-        color: "#333",
         fontWeight: "600",
     },
     submitButton: {
         flex: 1,
-        backgroundColor: "#007BFF",
         borderRadius: 6,
         paddingVertical: 12,
         alignItems: "center",
         marginLeft: 8,
     },
     submitButtonText: {
-        color: "#fff",
         fontWeight: "bold",
     },
     radioContainer: {
@@ -594,24 +958,18 @@ const styles = StyleSheet.create({
     radioRow: {
         flexDirection: "row",
         alignItems: "center",
+        marginRight: 20,
     },
     radioButton: {
         width: 24,
         height: 24,
         borderRadius: 12,
         borderWidth: 2,
-        borderColor: "#ccc",
         marginRight: 8,
         justifyContent: "center",
         alignItems: "center",
     },
-    radioButtonSelected: {
-        backgroundColor: "#007BFF",
-        borderColor: "#007BFF",
-    },
     radioLabel: {
         fontSize: 16,
-        color: "#333",
     },
-
 });
