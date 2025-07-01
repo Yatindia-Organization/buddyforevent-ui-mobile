@@ -787,17 +787,17 @@ const styles = StyleSheet.create({
     headerRow: {
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: "space-between",
         marginBottom: 12,
     },
     eventName: {
         fontSize: 20,
         fontWeight: 'bold',
         flexShrink: 1,
-        marginRight: 8,
     },
     statusDropdown: {
-        paddingHorizontal: 12,
-        paddingVertical: 8,
+        paddingHorizontal: 18,
+        paddingVertical: 10,
         borderRadius: 18,
         minWidth: 90,
         alignItems: "center",

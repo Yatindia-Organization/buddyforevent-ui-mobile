@@ -1,239 +1,382 @@
-import React from 'react';
+import * as FileSystem from 'expo-file-system';
+import * as Sharing from 'expo-sharing';
+import React, { useEffect, useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    ScrollView,
-    Linking,
-    TouchableOpacity,
+    ActivityIndicator,
     Alert,
+    Dimensions,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View
 } from 'react-native';
-import { Card, IconButton, Divider } from 'react-native-paper';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-// import * as Clipboard from 'expo-clipboard';
-
-const urlItems = [
-    { label: 'LIVE UPDATE URL', url: 'https://in.explara.com/e/abc-event-qeajeyfepdf92ob5' },
-    { label: 'EVENT FEEDBACK URL', url: 'https://in.explara.com/e/abc-event-qeajeyfepdf92ob5' },
-    { label: 'LIVE POLL URL', url: 'https://in.explara.com/e/abc-event-qeajeyfepdf92ob5' },
-];
-
-const tableData = [
-    { id: '#15267', date: 'Mar 1, 2023', participant: 100, details: 1 },
-    { id: '#153587', date: 'Jan 26, 2023', participant: 300, details: 3 },
-    { id: '#12436', date: 'Feb 12, 2033', participant: 100, details: 1 },
-    { id: '#16879', date: 'Feb 12, 2033', participant: 500, details: 5 },
-    { id: '#16378', date: 'Feb 28, 2033', participant: 500, details: 5 },
-    { id: '#16609', date: 'March 13, 2033', participant: 100, details: 1 },
-    { id: '#16907', date: 'March 18, 2033', participant: 100, details: 1 },
-];
+import { Snackbar } from 'react-native-paper';
+import { Colors } from '../../../../constants/Colors';
+import { useGlobalInfo } from '../../../../context/GlobalContext';
+import { API_ROUTE } from '../../../../lib/config';
 
 export default function Report() {
-    const handleCopy = async (text) => {
-        // await Clipboard.setStringAsync(text);
-        Alert.alert('Copied to clipboard');
+    const { theme, event } = useGlobalInfo();
+    const colors = Colors[theme];
+
+    const [summary, setSummary] = useState(null);
+    const [submissions, setSubmissions] = useState([]);
+    const [ticketMap, setTicketMap] = useState({});
+    const [loading, setLoading] = useState(true);
+    const [snackbar, setSnackbar] = useState({ visible: false, message: '', severity: 'success' });
+    const [downloading, setDownloading] = useState(false);
+
+    const eventId = event?._id || event;
+
+    const showSnackbar = (msg, severity = 'success') =>
+        setSnackbar({ visible: true, message: msg, severity });
+
+    useEffect(() => {
+        if (!eventId) return;
+        setLoading(true);
+
+        const sumP = fetch(`${API_ROUTE}/api/v1/event/report/event/${eventId}`)
+            .then(r => r.json()).then(j => {
+                if (!j.success) throw new Error(j.message || 'Failed loading summary');
+                return j.data;
+            });
+
+        const subsP = fetch(
+            `${API_ROUTE}/api/v1/event/participantSearch?eventId=${eventId}&page=1&limit=10000`
+        ).then(r => r.json()).then(j => j.results || []);
+
+        const ticketsP = fetch(`${API_ROUTE}/api/v1/event/tickets/event/${eventId}`)
+            .then(r => r.json()).then(j => {
+                if (!j.success) throw new Error(j.message || 'Failed loading tickets');
+                return j.data;
+            });
+
+        Promise.all([sumP, subsP, ticketsP])
+            .then(([sum, subs, tickets]) => {
+                setSummary(sum);
+                setSubmissions(subs);
+                const m = {};
+                tickets.forEach(t => {
+                    m[t.userSubmissionId] = t.tierName.toUpperCase();
+                });
+                setTicketMap(m);
+            })
+            .catch(err => showSnackbar(err.message, 'error'))
+            .finally(() => setLoading(false));
+    }, [eventId]);
+
+    if (!eventId) {
+        return <Text style={{ color: colors.cancelButton, textAlign: 'center', marginTop: 40 }}>No event selected.</Text>;
+    }
+
+    const displayVal = val => {
+        if (typeof val === 'boolean') return val ? 'YES' : 'NO';
+        if (typeof val === 'string') return val.toUpperCase();
+        if (Array.isArray(val))
+            return val
+                .map(d =>
+                    new Date(d).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+                )
+                .join(', ');
+        if (val instanceof Date)
+            return new Date(val)
+                .toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })
+                .toUpperCase();
+        if (val != null && typeof val !== 'object') return String(val).toUpperCase();
+        return '';
     };
 
-    const handleShare = (url) => {
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(url)}`;
-        Linking.openURL(whatsappUrl);
+    const renderCell = val => {
+        if (val && typeof val === 'object' && 'text' in val && 'hyperlink' in val) {
+            return (
+                <Text
+                    style={{ color: colors.button, textDecorationLine: 'underline' }}
+                    onPress={() => Alert.alert('Link', val.hyperlink)}
+                >
+                    {String(val.text).toUpperCase()}
+                </Text>
+            );
+        }
+        return displayVal(val);
+    };
+
+    // Expo FileSystem + Sharing for true Excel download
+    const handleExcelDownload = async () => {
+        try {
+            setDownloading(true);
+            const url = `${API_ROUTE}/api/v1/event/report/event/${eventId}/export`;
+            const fileUri =
+                FileSystem.cacheDirectory +
+                `Event-Report-${eventId}-${Date.now()}.xlsx`;
+
+            const res = await FileSystem.downloadAsync(url, fileUri, {
+                headers: {
+                    // if your API needs auth, put token here
+                },
+            });
+
+            if (res && res.status === 200) {
+                if (await Sharing.isAvailableAsync()) {
+                    await Sharing.shareAsync(res.uri, {
+                        mimeType:
+                            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                        dialogTitle: 'Share or Save Event Report',
+                    });
+                    showSnackbar('Excel file downloaded! You can now share or save it.', 'success');
+                } else {
+                    showSnackbar('File downloaded. Sharing is not available on this device.', 'info');
+                }
+            } else {
+                showSnackbar('Download failed! Please try again.', 'error');
+            }
+        } catch (err) {
+            showSnackbar('Download failed: ' + err.message, 'error');
+        } finally {
+            setDownloading(false);
+        }
+    };
+
+    // Card grid layout calculation
+    const { width: screenWidth } = Dimensions.get('window');
+    const gridSpacing = 12;
+    const numColumns = 3;
+    const cardWidth = (screenWidth - (numColumns + 1) * gridSpacing - 32) / numColumns;
+
+    const renderSummaryGrid = (metrics) => {
+        const entries = Object.entries(metrics);
+        const rows = [];
+        for (let i = 0; i < entries.length; i += 3) {
+            const row = entries.slice(i, i + 3);
+            rows.push(row);
+        }
+        return (
+            <View style={styles.summaryGridWrap}>
+                {rows.map((row, rowIdx) => (
+                    <View style={styles.summaryGridRow} key={rowIdx}>
+                        {row.map(([k, v], idx) => (
+                            <View
+                                key={k}
+                                style={[
+                                    styles.metricCard,
+                                    {
+                                        backgroundColor: colors.card,
+                                        width: cardWidth,
+                                        marginRight: idx < numColumns - 1 ? gridSpacing : 0,
+                                    }
+                                ]}
+                            >
+                                <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>
+                                    {k.replace(/([A-Z])/g, ' $1').toUpperCase()}
+                                </Text>
+                                <Text style={[styles.metricValue, { color: colors.button }]}>
+                                    {v ?? '—'}
+                                </Text>
+                            </View>
+                        ))}
+                        {row.length < 3 &&
+                            Array.from({ length: 3 - row.length }).map((_, i) => (
+                                <View key={`empty-${i}`} style={{ width: cardWidth, marginRight: i < 2 ? gridSpacing : 0 }} />
+                            ))}
+                    </View>
+                ))}
+            </View>
+        );
     };
 
     return (
-        <SafeAreaProvider>
-            <SafeAreaView style={styles.container}>
-                <ScrollView>
-                    <Text style={styles.header}>Event Report</Text>
+        <ScrollView style={{ backgroundColor: colors.background }}>
+            {loading && (
+                <View style={{ padding: 24, alignItems: 'center', justifyContent: 'center' }}>
+                    <ActivityIndicator color={colors.button} size="large" />
+                    <Text style={{ color: colors.text, marginTop: 12 }}>Loading...</Text>
+                </View>
+            )}
 
-                    {/* URL Sections */}
-                    <Card style={styles.card}>
-                        {urlItems.map((item, i) => (
-                            <View key={i} style={styles.urlRow}>
-                                <Text style={styles.urlLabel}>{item.label}</Text>
-                                <TouchableOpacity onPress={() => Linking.openURL(item.url)}>
-                                    <Text style={styles.urlLink}>{item.url}</Text>
-                                </TouchableOpacity>
-                                <IconButton
-                                    icon="content-copy"
-                                    size={20}
-                                    onPress={() => handleCopy(item.url)}
-                                />
-                                <IconButton
-                                    icon="whatsapp"
-                                    size={20}
-                                    iconColor="green"
-                                    onPress={() => handleShare(item.url)}
-                                />
-                            </View>
-                        ))}
-                    </Card>
+            <View style={{ padding: 16 }}>
+                <Text style={[styles.title, { color: colors.button }]}>EVENT REPORT</Text>
 
-                    {/* Tabs-like Links */}
-                    <View style={styles.linkRow}>
-                        <TouchableOpacity onPress={() => Alert.alert('Link Clicked')}>
-                            <Text style={styles.tabLink}>View Live Count</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => Alert.alert('Link Clicked')}>
-                            <Text style={styles.tabLink}>Event FeedBack</Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity onPress={() => Alert.alert('Link Clicked')}>
-                            <Text style={styles.tabLink}>Add Live Poll</Text>
-                        </TouchableOpacity>
+                {/* Download Button */}
+                <TouchableOpacity
+                    style={[styles.downloadBtn, { backgroundColor: colors.button, opacity: downloading ? 0.7 : 1 }]}
+                    onPress={handleExcelDownload}
+                    disabled={downloading}
+                >
+                    <Text style={{ color: colors.buttonText, fontWeight: 'bold', textAlign: 'center' }}>
+                        {downloading ? 'DOWNLOADING...' : 'DOWNLOAD AS EXCEL'}
+                    </Text>
+                </TouchableOpacity>
+
+                {/* Summary Metrics Grid */}
+                {summary && (
+                    <View style={[styles.paper, { backgroundColor: 'transparent', elevation: 0 }]}>
+                        <Text style={[styles.subtitle, { color: colors.text }]}>SUMMARY</Text>
+                        {renderSummaryGrid(summary.metrics)}
                     </View>
+                )}
 
+                {/* Ticket Tiers */}
+                {summary?.ticketTiers?.length > 0 && (
+                    <View style={[styles.paper, { backgroundColor: colors.card }]}>
+                        <Text style={[styles.subtitle, { color: colors.text }]}>TICKET TIERS</Text>
+                        <ScrollView horizontal style={{ marginBottom: 8 }}>
+                            <View>
+                                <View style={[styles.tableRow, styles.tableHeaderRow, { backgroundColor: colors.dropdownBackground }]}>
+                                    <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>NAME</Text>
+                                    <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>PRICE</Text>
+                                    <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>CAPACITY</Text>
+                                    <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>PERKS</Text>
+                                </View>
+                                {summary.ticketTiers.map((t, i) => (
+                                    <View key={i} style={styles.tableRow}>
+                                        <Text style={[styles.tableCell, { color: colors.text }]}>{t.name.toUpperCase()}</Text>
+                                        <Text style={[styles.tableCell, { color: colors.text }]}>{t.price}</Text>
+                                        <Text style={[styles.tableCell, { color: colors.text }]}>{t.capacity}</Text>
+                                        <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{t.perks.join(', ').toUpperCase()}</Text>
+                                    </View>
+                                ))}
+                            </View>
+                        </ScrollView>
+                    </View>
+                )}
 
-                    <Card style={styles.card}>
-                        <View style={styles.tableHeader}>
-                            <Text style={styles.tableHeaderCell}>Event Name</Text>
-                            <Text style={styles.tableHeaderCell}>Time</Text>
-                            <Text style={styles.tableHeaderCell}>Participant</Text>
-                            <Text style={styles.tableHeaderCell}>Event Details</Text>
+                {/* Submissions Table */}
+                <ScrollView horizontal style={{ marginBottom: 24 }}>
+                    <View>
+                        <View style={[styles.tableRow, styles.tableHeaderRow, { backgroundColor: colors.dropdownBackground }]}>
+                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>TIER</Text>
+                            {summary?.formSchema.map(f => (
+                                <Text key={f.id} style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>
+                                    {f.label.toUpperCase()}
+                                </Text>
+                            ))}
+                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>VISITORS</Text>
+                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>ENTRY TIMES</Text>
+                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>EXIT TIMES</Text>
+                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>FOOD</Text>
+                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>FOOD TIMES</Text>
+                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>GIFT</Text>
+                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>GIFT TIMES</Text>
+                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>SUBMITTED AT</Text>
                         </View>
-                        <Divider />
-                        {tableData.map((row, idx) => (
-                            <View key={idx} style={styles.tableRow}>
-                                <Text style={styles.tableCell}>{row.id}</Text>
-                                <Text style={styles.tableCell}>{row.date}</Text>
-                                <Text style={styles.tableCell}>{row.participant}</Text>
-                                <Text style={styles.tableCell}>{row.details}</Text>
+                        {submissions.map(sub => (
+                            <View key={sub._id} style={styles.tableRow}>
+                                <Text style={[styles.tableCell, { color: colors.text }]}>{ticketMap[sub._id] || '—'}</Text>
+                                {summary.formSchema.map(fld => {
+                                    const resp = sub.responses.find(r => r.fieldId === fld.id);
+                                    return (
+                                        <Text key={fld.id} style={[styles.tableCell, { color: colors.text }]}>
+                                            {renderCell(resp?.value)}
+                                        </Text>
+                                    );
+                                })}
+                                <Text style={[styles.tableCell, { color: colors.text }]}>{displayVal(sub.visitorCount)}</Text>
+                                <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.entryTime)}</Text>
+                                <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.exitTime)}</Text>
+                                <Text style={[styles.tableCell, { color: colors.button }]}>{displayVal(sub.food)}</Text>
+                                <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.foodTime)}</Text>
+                                <Text style={[styles.tableCell, { color: colors.button }]}>{displayVal(sub.gift)}</Text>
+                                <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.giftTime)}</Text>
+                                <Text style={[styles.tableCell, { color: colors.text }]}>{displayVal(sub.submittedAt)}</Text>
                             </View>
                         ))}
-                    </Card>
-
-                    {/* Pagination UI (static) */}
-                    <View style={styles.pagination}>
-                        <TouchableOpacity onPress={() => Alert.alert('Previous Page')}>
-                            <Text style={styles.pageBtn}>Prev</Text>
-                        </TouchableOpacity>
-                        <Text style={styles.pageLabel}>Page 1</Text>
-                        <TouchableOpacity onPress={() => Alert.alert('Next Page')}>
-                            <Text style={styles.pageBtn}>Next</Text>
-                        </TouchableOpacity>
+                        {!loading && submissions.length === 0 && (
+                            <View style={styles.tableRow}>
+                                <Text style={[styles.tableCell, { color: colors.cancelButton, textAlign: 'center', flex: 1 }]}>
+                                    NO SUBMISSIONS
+                                </Text>
+                            </View>
+                        )}
                     </View>
-
                 </ScrollView>
-            </SafeAreaView>
-        </SafeAreaProvider>
+            </View>
 
+            {/* Snackbar */}
+            <Snackbar
+                visible={snackbar.visible}
+                onDismiss={() => setSnackbar((s) => ({ ...s, visible: false }))}
+                duration={3500}
+                style={{ backgroundColor: snackbar.severity === 'error' ? colors.cancelButton : colors.button }}
+            >
+                <Text style={{ color: colors.buttonText }}>{snackbar.message}</Text>
+            </Snackbar>
+        </ScrollView>
     );
 }
 
 const styles = StyleSheet.create({
-    container: {
-        minHeight: 700,
-        padding: 16,
-        backgroundColor: '#fff',
-    },
-    card: {
-        marginBottom: 16,
-        padding: 16,
-        borderRadius: 8,
-        backgroundColor: '#FFFFFF',
-        borderWidth: 1,
-        borderColor: '#E0E0E0',
-    },
-    urlRow: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        marginBottom: 8,
-    },
-    linkRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginBottom: 16,
-    },
-    paginationRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginTop: 16,
-    },
-    paginationLeft: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    paginationRight: {
-        flexDirection: 'row',
-        alignItems: 'center',
-    },
-    paginationInput: {
-        width: 50,
-        height: 40,
-        marginRight: 8,
-    },
-    header: {
-        fontSize: 20,
+    title: {
         fontWeight: 'bold',
-        marginBottom: 16,
-        color: '#000000',
+        fontSize: 22,
+        marginBottom: 10,
     },
-    urlLabel: {
-        width: 150,
-        fontWeight: '600',
-        fontSize: 12,
-        color: '#000000',
-    },
-    urlLink: {
-        color: '#0066cc',
-        textDecorationLine: 'underline',
-        marginRight: 8,
-    },
-    tabLink: {
-        color: '#0066cc',
-        fontWeight: '600',
-        textDecorationLine: 'underline',
-    },
-    tableHeaderCell: {
-        flex: 1,
-        fontWeight: 'bold',
-        fontSize: 12,
-        color: '#000000',
-    },
-    paginationText: {
-        fontSize: 12,
-        marginRight: 8,
-        color: '#000000',
-    },
-    tableHeader: {
-        flexDirection: "row",
-        backgroundColor: "#dbeafe",
+    downloadBtn: {
+        alignSelf: 'flex-start',
+        borderRadius: 6,
         paddingVertical: 8,
-        paddingHorizontal: 4,
-        borderTopLeftRadius: 4,
-        borderTopRightRadius: 4,
+        paddingHorizontal: 20,
+        marginBottom: 18,
+        marginTop: 4,
+    },
+    paper: {
+        borderRadius: 10,
+        marginBottom: 22,
+        padding: 14,
+        elevation: 1,
+    },
+    subtitle: {
+        fontSize: 17,
+        fontWeight: '600',
+        marginBottom: 10,
+    },
+    summaryGridWrap: {
+        marginHorizontal: -6,
+    },
+    summaryGridRow: {
+        flexDirection: 'row',
+        marginBottom: 12,
+    },
+    metricCard: {
+        borderRadius: 9,
+        padding: 16,
+        alignItems: 'center',
+        justifyContent: 'center',
+        elevation: 2,
+        marginLeft: 6,
+        marginRight: 6,
+        minHeight: 80,
+    },
+    metricLabel: {
+        fontSize: 12,
+        marginBottom: 5,
+        textAlign: 'center',
+    },
+    metricValue: {
+        fontSize: 22,
+        fontWeight: 'bold',
+        textAlign: 'center',
     },
     tableRow: {
-        flexDirection: "row",
+        flexDirection: 'row',
+        alignItems: 'center',
         borderBottomWidth: 1,
-        borderColor: "#e5e7eb",
-        paddingVertical: 12,
-        paddingHorizontal: 4,
+        borderColor: '#eee',
+        minHeight: 36,
+        paddingVertical: 5,
     },
-    tableCellHeader: {
-        flex: 1,
-        fontWeight: "bold",
-        fontSize: 14,
-        color: "#1e3a8a",
+    tableHeaderRow: {
+        borderBottomWidth: 2,
+    },
+    headerCell: {
+        fontWeight: 'bold',
+        fontSize: 12,
+        paddingVertical: 3,
     },
     tableCell: {
+        fontSize: 11,
+        paddingHorizontal: 6,
         flex: 1,
-        fontSize: 13,
+        flexWrap: 'wrap',
+        minWidth: 70,
     },
-    pagination: {
-        flexDirection: "row",
-        justifyContent: "space-between",
-        marginTop: 16,
-        alignItems: "center",
-    },
-    pageBtn: {
-        paddingHorizontal: 12,
-        paddingVertical: 6,
-        backgroundColor: "#eee",
-        borderRadius: 4,
-    },
-    pageLabel: {
-        fontWeight: "bold",
-    },
-
 });
