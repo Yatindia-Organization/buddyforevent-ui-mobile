@@ -1,14 +1,13 @@
 import React, { useState } from 'react';
 import {
-    View,
-    Text,
-    StyleSheet,
-    TextInput,
-    Modal,
     ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
     TouchableOpacity,
+    View
 } from 'react-native';
-import { Button, Snackbar, Chip, RadioButton, Divider, Dialog, Portal, Paragraph } from 'react-native-paper';
+import { Button, Chip, Dialog, Paragraph, Portal, RadioButton, Snackbar } from 'react-native-paper';
 
 export default function Email() {
     const [activeTab, setActiveTab] = useState('email');
@@ -34,7 +33,7 @@ export default function Email() {
 
     const hasInput = () =>
         singleTo || multipleTo.length > 0 || subject || message;
-
+ 
     const clearAll = () => {
         setSingleTo('');
         setMultipleTo([]);

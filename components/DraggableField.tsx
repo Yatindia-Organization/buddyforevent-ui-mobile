@@ -47,7 +47,7 @@ export default function DraggableField({ field, onConfigure, onDelete }) {
 
 const styles = StyleSheet.create({
     container: {
-        backgroundColor: '#DBEAFE', // blue-100
+        backgroundColor: '#DBEAFE', 
         padding: 12,
         borderRadius: 8,
         marginBottom: 8,
