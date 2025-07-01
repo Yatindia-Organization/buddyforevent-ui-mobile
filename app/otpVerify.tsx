@@ -1,41 +1,47 @@
-import React, { useState, useRef } from "react";
+import { useRouter } from "expo-router";
+import React, { useRef, useState } from "react";
 import {
-    View,
+    ActivityIndicator,
+    Image,
+    KeyboardAvoidingView,
+    Platform,
+    StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
-    StyleSheet,
-    KeyboardAvoidingView,
-    Platform,
+    View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { Colors } from "../constants/Colors";
+import { useGlobalInfo } from "../context/GlobalContext";
 
 export default function OtpVerify() {
     const [otp, setOtp] = useState(["", "", "", ""]);
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
     const inputRefs = useRef([]);
-
     const router = useRouter();
+    const { theme } = useGlobalInfo();
 
     const handleChange = (value, index) => {
         const newOtp = [...otp];
-        newOtp[index] = value.slice(-1); // Only allow last character
+        newOtp[index] = value.replace(/[^0-9]/g, "").slice(-1); // Only allow digits, last char
         setOtp(newOtp);
 
         // Move to next input if available
         if (value && index < inputRefs.current.length - 1) {
-            inputRefs.current[index + 1].focus();
+            inputRefs.current[index + 1]?.focus();
         }
     };
 
     const handleSubmit = async () => {
+        setError("");
         const enteredOtp = otp.join("");
 
         if (enteredOtp.length !== 4) {
             setError("Please enter the complete OTP");
             return;
         }
-
+        setLoading(true);
         try {
             const res = await fetch("https://your-api.com/api/verify-reset-otp", {
                 method: "POST",
@@ -52,17 +58,27 @@ export default function OtpVerify() {
             }
         } catch (err) {
             setError("Server error. Try again.");
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : undefined}
-            style={styles.container}
+            style={[styles.container, { backgroundColor: Colors[theme].background }]}
         >
-            <View style={styles.card}>
-                <Text style={styles.title}>Enter OTP</Text>
-                <Text style={styles.subtitle}>A 4-digit code was sent to your email.</Text>
+            <View style={[styles.card, { backgroundColor: Colors[theme].card }]}>
+                <View style={styles.header}>
+                    <Image
+                        source={require("../assets/images/logo-company.png")}
+                        style={styles.logo}
+                    />
+                </View>
+                <Text style={[styles.title, { color: Colors[theme].text }]}>Enter OTP</Text>
+                <Text style={[styles.subtitle, { color: Colors[theme].secondaryText }]}>
+                    A 4-digit code was sent to your email.
+                </Text>
 
                 {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -71,18 +87,54 @@ export default function OtpVerify() {
                         <TextInput
                             key={index}
                             ref={(ref) => (inputRefs.current[index] = ref)}
-                            style={styles.otpInput}
+                            style={[
+                                styles.otpInput,
+                                {
+                                    borderColor: Colors[theme].secondaryText,
+                                    color: Colors[theme].text,
+                                    backgroundColor: Colors[theme].dropdownBackground,
+                                },
+                            ]}
                             keyboardType="number-pad"
                             maxLength={1}
                             value={digit}
                             onChangeText={(value) => handleChange(value, index)}
                             autoFocus={index === 0}
+                            editable={!loading}
+                            selectTextOnFocus
                         />
                     ))}
                 </View>
 
-                <TouchableOpacity style={styles.button} onPress={handleSubmit}>
-                    <Text style={styles.buttonText}>Verify OTP</Text>
+                <TouchableOpacity
+                    style={[
+                        styles.button,
+                        {
+                            backgroundColor: Colors[theme].button,
+                            opacity: loading ? 0.7 : 1,
+                        },
+                    ]}
+                    onPress={handleSubmit}
+                    disabled={loading}
+                >
+                    {loading ? (
+                        <View style={{ flexDirection: "row", alignItems: "center" }}>
+                            <ActivityIndicator size="small" color={Colors[theme].buttonText} style={{ marginRight: 8 }} />
+                            <Text style={[styles.buttonText, { color: Colors[theme].buttonText }]}>Verifying...</Text>
+                        </View>
+                    ) : (
+                        <Text style={[styles.buttonText, { color: Colors[theme].buttonText }]}>Verify OTP</Text>
+                    )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                    style={styles.goBack}
+                    onPress={() => router.back()}
+                    disabled={loading}
+                >
+                    <Text style={{ color: Colors[theme].button, fontWeight: "bold" }}>
+                        {"<"} Back
+                    </Text>
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
@@ -94,28 +146,42 @@ const styles = StyleSheet.create({
         flex: 1,
         justifyContent: "center",
         paddingHorizontal: 20,
-        backgroundColor: "#fff",
+    },
+    header: {
+        alignItems: "center",
+        marginBottom: 24,
+    },
+    logo: {
+        width: 70,
+        height: 70,
+        resizeMode: "contain",
+        marginTop: 12,
     },
     card: {
         width: "100%",
         padding: 20,
         borderRadius: 8,
-        backgroundColor: "#f9f9f9",
         elevation: 3,
+        shadowColor: "#000",
+        shadowOpacity: 0.06,
+        shadowOffset: { width: 0, height: 2 },
+        shadowRadius: 8,
     },
     title: {
         fontSize: 22,
         fontWeight: "bold",
         marginBottom: 6,
+        textAlign: "center",
     },
     subtitle: {
         fontSize: 14,
         marginBottom: 20,
-        color: "#444",
+        textAlign: "center",
     },
     error: {
-        color: "red",
+        color: "#e53935",
         marginBottom: 10,
+        textAlign: "center",
     },
     otpContainer: {
         flexDirection: "row",
@@ -125,20 +191,24 @@ const styles = StyleSheet.create({
     otpInput: {
         width: 50,
         height: 50,
-        borderBottomWidth: 2,
-        borderColor: "#ccc",
+        borderWidth: 2,
+        borderRadius: 8,
         fontSize: 18,
         textAlign: "center",
-        color: "#000",
     },
     button: {
-        backgroundColor: "#000",
         paddingVertical: 12,
         borderRadius: 4,
         alignItems: "center",
+        marginTop: 8,
     },
     buttonText: {
-        color: "#fff",
         fontWeight: "600",
+        fontSize: 16,
+    },
+    goBack: {
+        alignItems: "center",
+        marginTop: 16,
     },
 });
+

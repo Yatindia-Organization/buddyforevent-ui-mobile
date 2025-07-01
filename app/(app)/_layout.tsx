@@ -1,11 +1,12 @@
+import { Slot, useRouter, useSegments } from "expo-router";
 import React, { useEffect } from "react";
-import { View, ActivityIndicator } from "react-native";
-import { useRouter, useSegments, Slot } from "expo-router";
-import { useGlobalInfo } from "@/context/GlobalContext";
-import TopNavBar from "@/components/TopNavBar";
+import { ActivityIndicator, View } from "react-native";
+import TopNavBar from "../../components/TopNavBar";
+import { Colors } from "../../constants/Colors";
+import { useGlobalInfo } from "../../context/GlobalContext";
 
 export default function AppLayout() {
-  const { isLoggedIn } = useGlobalInfo();
+  const { isLoggedIn,theme } = useGlobalInfo();
   const router = useRouter();
   const segments = useSegments();
 
@@ -31,14 +32,14 @@ export default function AppLayout() {
   // Show spinner while checking auth
   if (!isLoggedIn) {
     return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <ActivityIndicator size="large" />
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors[theme].background }}>
+        <ActivityIndicator size="large" color={Colors[theme].button} />
       </View>
     );
   }
 
   return (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: Colors[theme].background }}>
       <TopNavBar />
       <Slot />
     </View>

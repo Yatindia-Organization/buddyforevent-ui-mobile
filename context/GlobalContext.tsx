@@ -1,6 +1,9 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
+import { useColorScheme } from "react-native";
 
-// Define the shape of your global context
+type ThemeType = "light" | "dark";
+type ThemePreferenceType = "system" | "light" | "dark";
+
 type GlobalContextType = {
     isLoggedIn: boolean;
     changeIsLoggedIn: (newState: boolean) => void;
@@ -16,12 +19,17 @@ type GlobalContextType = {
 
     event: string;
     changeEvent: (newState: string) => void;
+
+    theme: ThemeType;
+    setTheme: (newTheme: ThemeType) => void;
+
+    themePreference: ThemePreferenceType;
+    setThemePreference: (pref: ThemePreferenceType) => void;
+
 };
 
-// Create the context with an optional default value
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
-// Custom hook to use global context
 export function useGlobalInfo() {
     const context = useContext(GlobalContext);
     if (!context) {
@@ -30,13 +38,31 @@ export function useGlobalInfo() {
     return context;
 }
 
-// Context provider component
 export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [loginFlow, setLoginFlow] = useState(true);
     const [userType, setUserType] = useState<string>("admin");
     const [userId, setUserId] = useState<string | null>("");
     const [event, setEvent] = useState<string>("");
+
+    const [themePreference, setThemePreference] = useState<ThemePreferenceType>("system");
+    const systemColorScheme = useColorScheme();
+    const [theme, setTheme] = useState<ThemeType>(
+        systemColorScheme === "dark" ? "dark" : "light"
+    );
+
+    useEffect(() => {
+        if (themePreference === "system") {
+            setTheme(systemColorScheme === "dark" ? "dark" : "light");
+        } else {
+            setTheme(themePreference);
+        }
+    }, [systemColorScheme, themePreference]);
+
+    const handleSetTheme = (newTheme: ThemeType) => {
+        setThemePreference(newTheme);
+        setTheme(newTheme);
+    };
 
     const value: GlobalContextType = {
         isLoggedIn,
@@ -53,6 +79,13 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
 
         event,
         changeEvent: setEvent,
+
+        theme,
+        setTheme: handleSetTheme,
+
+        themePreference,
+        setThemePreference,
+
     };
 
     return (

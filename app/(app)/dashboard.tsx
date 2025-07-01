@@ -7,12 +7,12 @@ import {
     TouchableOpacity,
     View
 } from "react-native";
+import { Colors } from "../../constants/Colors";
 import { useGlobalInfo } from "../../context/GlobalContext";
 import { API_ROUTE } from "../../lib/config";
 
-
 const Dashboard = () => {
-    const { userId, changeEvent } = useGlobalInfo();
+    const { userId, changeEvent, theme } = useGlobalInfo();
     const [events, setEvents] = useState([]);
     const [page, setPage] = useState(0);
     const rowsPerPage = 5;
@@ -43,7 +43,6 @@ const Dashboard = () => {
         if (!userId) return;
 
         const fetchEvents = async () => {
-            console.log("useEffect", API_ROUTE);
             try {
                 const response = await fetch(`${API_ROUTE}/api/v1/event/userid/${userId}`);
                 const result = await response.json();
@@ -67,38 +66,39 @@ const Dashboard = () => {
         page * rowsPerPage + rowsPerPage
     );
 
+    const colors = Colors[theme];
+
     return (
-        <ScrollView contentContainerStyle={styles.container}>
+        <ScrollView contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}>
             {/* Top Cards */}
             <View style={styles.cardContainer}>
-                <StatCard label="Events Completed" value="12" backgroundColor="#D1FAE5" />
-                <StatCard label="Total Events" value="21" backgroundColor="#D6D1FA" />
-                <StatCard label="Total Registration" value="22" backgroundColor="#FFDFDF" />
-                <StatCard label="Total Participants" value="225" backgroundColor="#F8E5DA" />
+                <StatCard label="Events Completed" value="12" backgroundColor={colors.dropdownBackground} textColor={colors.text} />
+                <StatCard label="Total Events" value="21" backgroundColor={colors.dropdownBackground} textColor={colors.text} />
+                <StatCard label="Total Registration" value="22" backgroundColor={colors.dropdownBackground} textColor={colors.text} />
+                <StatCard label="Total Participants" value="225" backgroundColor={colors.dropdownBackground} textColor={colors.text} />
             </View>
 
             {/* Event List */}
-            <Text style={styles.title}>Latest Events</Text>
-            <View style={styles.tableHeader}>
-                <Text style={styles.tableCellHeader}>Name</Text>
-                <Text style={styles.tableCellHeader}>Start Date</Text>
-                <Text style={styles.tableCellHeader}>End Date</Text>
-                <Text style={styles.tableCellHeader}>Public</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Latest Events</Text>
+            <View style={[styles.tableHeader, { backgroundColor: colors.card }]}>
+                <Text style={[styles.tableCellHeader, { color: colors.secondaryText }]}>Name</Text>
+                <Text style={[styles.tableCellHeader, { color: colors.secondaryText }]}>Start Date</Text>
+                <Text style={[styles.tableCellHeader, { color: colors.secondaryText }]}>End Date</Text>
+                <Text style={[styles.tableCellHeader, { color: colors.secondaryText }]}>Public</Text>
             </View>
 
             {paginatedEvents.map((item, index) => (
-                <TouchableOpacity key={index} style={styles.tableRow} onPress={() => handleClick(item._id)}>
-                    <Text style={styles.tableCell}>{item.name}</Text>
-                    <Text style={styles.tableCell}>
+                <TouchableOpacity key={index} style={[styles.tableRow, { borderColor: colors.overlay }]} onPress={() => handleClick(item._id)}>
+                    <Text style={[styles.tableCell, { color: colors.text }]}>{item.name}</Text>
+                    <Text style={[styles.tableCell, { color: colors.secondaryText }]}>
                         {new Date(item.start_date || item.startDate).toLocaleDateString()}
                     </Text>
-                    <Text style={styles.tableCell}>
+                    <Text style={[styles.tableCell, { color: colors.secondaryText }]}>
                         {new Date(item.end_date).toLocaleDateString()}
                     </Text>
-                    <Text style={styles.tableCell}>{item.public_event ? "Yes" : "No"}</Text>
+                    <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{item.public_event ? "Yes" : "No"}</Text>
                 </TouchableOpacity>
             ))}
-
 
             {/* Pagination Buttons */}
             <View style={styles.pagination}>
@@ -106,25 +106,28 @@ const Dashboard = () => {
                     disabled={page === 0}
                     onPress={() => setPage((prev) => Math.max(prev - 1, 0))}
                 >
-                    <Text style={styles.pageBtn}>Prev</Text>
+                    <Text style={[styles.pageBtn, { backgroundColor: colors.button, color: colors.buttonText, opacity: page === 0 ? 0.6 : 1 }]}>
+                        Prev
+                    </Text>
                 </TouchableOpacity>
-                <Text style={styles.pageLabel}>Page {page + 1}</Text>
+                <Text style={[styles.pageLabel, { color: colors.text }]}>Page {page + 1}</Text>
                 <TouchableOpacity
                     disabled={(page + 1) * rowsPerPage >= events.length}
                     onPress={() => setPage((prev) => prev + 1)}
                 >
-                    <Text style={styles.pageBtn}>Next</Text>
+                    <Text style={[styles.pageBtn, { backgroundColor: colors.button, color: colors.buttonText, opacity: (page + 1) * rowsPerPage >= events.length ? 0.6 : 1 }]}>
+                        Next
+                    </Text>
                 </TouchableOpacity>
             </View>
         </ScrollView>
     );
 };
 
-const StatCard = ({ label, value, backgroundColor }) => (
+const StatCard = ({ label, value, backgroundColor, textColor }) => (
     <View style={[styles.statCard, { backgroundColor }]}>
-        {/* Replace this with <Image /> for icons if needed */}
-        <Text style={styles.statLabel}>{label}</Text>
-        <Text style={styles.statValue}>{value}</Text>
+        <Text style={[styles.statLabel, { color: textColor }]}>{label}</Text>
+        <Text style={[styles.statValue, { color: textColor }]}>{value}</Text>
     </View>
 );
 
@@ -157,29 +160,7 @@ const styles = StyleSheet.create({
     title: {
         fontSize: 22,
         fontWeight: "bold",
-        color: "#140088",
         marginBottom: 10,
-    },
-    eventItem: {
-        padding: 14,
-        borderWidth: 1,
-        borderColor: "#ccc",
-        borderRadius: 8,
-        marginBottom: 10,
-    },
-    eventName: {
-        fontSize: 16,
-        fontWeight: "600",
-    },
-    eventDate: {
-        fontSize: 14,
-        marginBottom: 4,
-        color: "#555",
-    },
-    noData: {
-        textAlign: "center",
-        marginTop: 20,
-        color: "#999",
     },
     pagination: {
         flexDirection: "row",
@@ -190,22 +171,25 @@ const styles = StyleSheet.create({
     pageBtn: {
         paddingHorizontal: 12,
         paddingVertical: 6,
-        backgroundColor: "#eee",
         borderRadius: 4,
+        fontWeight: "bold",
+        overflow: "hidden",
+        marginHorizontal: 2,
     },
     pageLabel: {
         fontWeight: "bold",
+        fontSize: 16,
     },
     tableHeader: {
         flexDirection: "row",
-        backgroundColor: "#dbeafe",
         paddingVertical: 8,
         paddingHorizontal: 4,
+        borderRadius: 5,
+        marginBottom: 2,
     },
     tableRow: {
         flexDirection: "row",
         borderBottomWidth: 1,
-        borderColor: "#e5e7eb",
         paddingVertical: 18,
         paddingHorizontal: 4,
     },
@@ -213,13 +197,11 @@ const styles = StyleSheet.create({
         flex: 1,
         fontWeight: "bold",
         fontSize: 14,
-        color: "#1e3a8a",
     },
     tableCell: {
         flex: 1,
         fontSize: 13,
     },
-
 });
 
 export default Dashboard;

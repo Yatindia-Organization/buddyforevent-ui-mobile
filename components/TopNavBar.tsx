@@ -1,49 +1,62 @@
+import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-    View,
+    Image,
+    Modal,
+    StyleSheet,
     Text,
     TouchableOpacity,
-    StyleSheet,
-    Modal,
-    Image,
+    View,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { Colors } from "../constants/Colors";
 import { useGlobalInfo } from "../context/GlobalContext";
 import navItems from "../lib/config/navItems";
 
 const TopNavBar = () => {
     const [menuVisible, setMenuVisible] = useState(false);
-    const { userType } = useGlobalInfo();
+    const { userType, theme, setTheme } = useGlobalInfo();
     const router = useRouter();
     const items = navItems[userType] || [];
+    const colors = Colors[theme];
 
     return (
-        <View style={styles.navbar}>
+        <View style={[styles.navbar, { backgroundColor: colors.card, borderBottomColor: colors.overlay }]}>
             {/* Left: Menu Button */}
             <TouchableOpacity onPress={() => setMenuVisible(true)}>
-                <Text style={styles.menuIcon}>☰</Text>
+                <Text style={[styles.menuIcon, { color: colors.button }]}>☰</Text>
             </TouchableOpacity>
 
             {/* Center: Title */}
-            <Text style={styles.title}>Buddy For Events</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Buddy For Events</Text>
 
             {/* Right: Icons */}
             <View style={styles.rightIcons}>
-                <TouchableOpacity onPress={() => { }}>
-                    <Text style={styles.icon}>🔔</Text>
+                {/* Theme toggle */}
+                <TouchableOpacity
+                    onPress={() => setTheme(theme === "light" ? "dark" : "light")}
+                    style={{ marginLeft: 10 }}
+                >
+                    <Text style={{ fontSize: 22 }}>
+                        {theme === "light" ? "🌙" : "☀️"}
+                    </Text>
                 </TouchableOpacity>
-                <TouchableOpacity onPress={() => { router.push("/profile")}}>
-                    <Text style={styles.icon}>👤</Text>
+                {/* Notification */}
+                <TouchableOpacity onPress={() => { }}>
+                    <Text style={[styles.icon, { color: colors.button }]}>🔔</Text>
+                </TouchableOpacity>
+                {/* Profile */}
+                <TouchableOpacity onPress={() => { router.push("/profile") }}>
+                    <Text style={[styles.icon, { color: colors.button }]}>👤</Text>
                 </TouchableOpacity>
             </View>
 
             {/* Nav Items Modal */}
             <Modal transparent visible={menuVisible} animationType="slide">
                 <TouchableOpacity
-                    style={styles.overlay}
+                    style={[styles.overlay, { backgroundColor: colors.overlay }]}
                     onPressOut={() => setMenuVisible(false)}
                 >
-                    <View style={styles.menuContainer}>
+                    <View style={[styles.menuContainer, { backgroundColor: colors.card }]}>
                         {items.map((item, idx) => (
                             <TouchableOpacity
                                 key={idx}
@@ -54,10 +67,10 @@ const TopNavBar = () => {
                                 }}
                             >
                                 <Image
-                                    source={{ uri: `https://your-cdn.com${item.icon}` }}
-                                    style={styles.iconImage}
+                                    source={{ uri: item.icon.startsWith("http") ? item.icon : `https://your-cdn.com${item.icon}` }}
+                                    style={[styles.iconImage, { tintColor: colors.button }]}
                                 />
-                                <Text style={styles.menuText}>{item.label}</Text>
+                                <Text style={[styles.menuText, { color: colors.text }]}>{item.label}</Text>
                             </TouchableOpacity>
                         ))}
                     </View>
@@ -70,45 +83,48 @@ const TopNavBar = () => {
 const styles = StyleSheet.create({
     navbar: {
         height: 90,
-        backgroundColor: "#fff",
         flexDirection: "row",
         alignItems: "center",
         justifyContent: "space-between",
         paddingHorizontal: 16,
-        paddingTop:40,
-        borderBottomWidth:1
+        paddingTop: 40,
+        borderBottomWidth: 1,
     },
     menuIcon: {
         fontSize: 30,
-        color: "#000",
     },
     title: {
-        color: "#fff",
         fontSize: 18,
         fontWeight: "600",
         flex: 1,
         marginLeft: 16,
+        textAlign: "center",
     },
     rightIcons: {
         flexDirection: "row",
+        alignItems: "center",
         gap: 12,
     },
     icon: {
         fontSize: 20,
-        color: "#fff",
         marginLeft: 12,
     },
     overlay: {
         flex: 1,
         justifyContent: "flex-start",
         alignItems: "flex-end",
-        backgroundColor: "rgba(0,0,0,0.3)",
     },
     menuContainer: {
         width: 240,
-        backgroundColor: "#fff",
         padding: 16,
         paddingTop: 40,
+        borderTopLeftRadius: 16,
+        borderBottomLeftRadius: 16,
+        elevation: 4,
+        shadowColor: "#000",
+        shadowOpacity: 0.08,
+        shadowRadius: 4,
+        shadowOffset: { width: 0, height: 2 },
     },
     menuItem: {
         flexDirection: "row",

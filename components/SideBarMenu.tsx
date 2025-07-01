@@ -1,13 +1,14 @@
+import { useRouter, useSegments } from "expo-router";
 import React, { useState } from "react";
 import {
-    View,
+    Image,
+    Modal,
+    StyleSheet,
     Text,
     TouchableOpacity,
-    StyleSheet,
-    Modal,
-    Image,
+    View,
 } from "react-native";
-import { useRouter, useSegments } from "expo-router";
+import { Colors } from "../constants/Colors";
 import { useGlobalInfo } from "../context/GlobalContext";
 import navItems from "../lib/config/navItems";
 
@@ -18,7 +19,7 @@ const SidebarMenu = () => {
 
     const currentPath = "/" + segments.join("/");
 
-    const { isLoggedIn, userType } = useGlobalInfo();
+    const { isLoggedIn, userType, theme } = useGlobalInfo();
 
     // If user is not logged in, do not render the sidebar at all
     if (!isLoggedIn) {
@@ -26,12 +27,13 @@ const SidebarMenu = () => {
     }
 
     const items = userType ? navItems[userType] || [] : [];
+    const colors = Colors[theme];
 
     return (
         <View>
             {/* Toggle Button */}
             <TouchableOpacity onPress={() => setVisible(true)} style={styles.menuButton}>
-                <Text style={styles.icon}>☰</Text>
+                <Text style={[styles.icon, { color: colors.button }]}>☰</Text>
             </TouchableOpacity>
 
             {/* Sidebar Menu */}
@@ -39,23 +41,27 @@ const SidebarMenu = () => {
                 transparent
                 visible={visible}
                 animationType="slide"
-                onRequestClose={() => setVisible(false)} // Handles Android back button
+                onRequestClose={() => setVisible(false)}
             >
                 <TouchableOpacity
-                    style={styles.overlay}
+                    style={[styles.overlay, { backgroundColor: colors.overlay }]}
                     activeOpacity={1}
                     onPressOut={() => setVisible(false)}
                 >
-                    <View style={styles.menuContainer}>
+                    <View style={[styles.menuContainer, { backgroundColor: colors.card, shadowColor: colors.text }]}>
                         {items.length === 0 ? (
-                            <Text style={styles.noItemsText}>No navigation items available.</Text>
+                            <Text style={[styles.noItemsText, { color: colors.secondaryText }]}>
+                                No navigation items available.
+                            </Text>
                         ) : (
                             items.map((item, idx) => (
                                 <TouchableOpacity
                                     key={idx}
                                     style={[
                                         styles.menuItem,
-                                        currentPath.startsWith(item.path) && styles.activeMenuItem
+                                        currentPath.startsWith(item.path) && {
+                                            backgroundColor: colors.dropdownBackground,
+                                        }
                                     ]}
                                     onPress={() => {
                                         setVisible(false);
@@ -63,10 +69,12 @@ const SidebarMenu = () => {
                                     }}
                                 >
                                     <Image
-                                        source={{ uri: item.icon }} // adjust if needed
-                                        style={styles.iconImage}
+                                        source={{ uri: item.icon }}
+                                        style={[styles.iconImage, { tintColor: colors.button }]}
                                     />
-                                    <Text style={styles.menuText}>{item.label}</Text>
+                                    <Text style={[styles.menuText, { color: colors.text }]}>
+                                        {item.label}
+                                    </Text>
                                 </TouchableOpacity>
                             ))
                         )}
@@ -86,28 +94,26 @@ const styles = StyleSheet.create({
     },
     icon: {
         fontSize: 24,
-        color: "#fff",
     },
     overlay: {
         flex: 1,
         justifyContent: "flex-start",
         alignItems: "flex-end",
-        backgroundColor: "rgba(0,0,0,0.3)",
     },
     menuContainer: {
         width: 240,
-        backgroundColor: "#fff",
         padding: 16,
         paddingTop: 48,
         elevation: 4,
-        shadowColor: "#000",
+        borderTopLeftRadius: 12,
+        borderBottomLeftRadius: 12,
+        // shadowColor set from theme
         shadowOpacity: 0.1,
         shadowRadius: 6,
         shadowOffset: { width: 0, height: 2 },
     },
     noItemsText: {
         fontSize: 16,
-        color: "#888",
         textAlign: "center",
     },
     menuItem: {
@@ -116,9 +122,6 @@ const styles = StyleSheet.create({
         marginVertical: 10,
         padding: 8,
         borderRadius: 6,
-    },
-    activeMenuItem: {
-        backgroundColor: "#d0e0ff",
     },
     iconImage: {
         width: 20,
