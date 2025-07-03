@@ -1,615 +1,765 @@
-// import DateTimePicker from '@react-native-community/datetimepicker';
-// import React, { useState } from 'react';
-// import { Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
-// import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+// import { Ionicons } from '@expo/vector-icons';
+// import React, { useEffect, useState } from "react";
+// import {
+//     KeyboardAvoidingView,
+//     Platform,
+//     ScrollView,
+//     StyleSheet,
+//     Text,
+//     TextInput,
+//     TouchableOpacity,
+//     View
+// } from "react-native";
+// import { Colors } from "../../constants/Colors";
+// import { useGlobalInfo } from "../../context/GlobalContext";
+// import { API_ROUTE } from "../../lib/config";
 
-// interface FormData {
-//     registrationName: string;
-//     quantity: string;
-//     minQty: string;
-//     maxQty: string;
+// type Tier = {
+//     name: string;
 //     description: string;
-//     startDate: Date | null;
-//     endDate: Date | null;
-//     showRemaining: boolean;
-//     teamRegistration: boolean;
-// }
+//     price: number | string;
+//     capacity: number | string;
+//     perks: string;
+// };
 
-// const TicketRegistrationForm: React.FC = () => {
-//     const [formData, setFormData] = useState<FormData>({
-//         registrationName: '',
-//         quantity: '',
-//         minQty: '',
-//         maxQty: '',
-//         description: '',
-//         startDate: null,
-//         endDate: null,
-//         showRemaining: true,
-//         teamRegistration: false,
-//     });
+// export default function TicketRegistrationForm({ eventName = "dummy" }) {
+//     const { event: eventId, theme } = useGlobalInfo();
+//     const colors = Colors[theme];
+//     const [tiers, setTiers] = useState<Tier[]>([]);
+//     const [errors, setErrors] = useState<{ [key: string]: string }>({});
+//     const [isEditing, setIsEditing] = useState(false);
+//     const [loading, setLoading] = useState(false);
 
-//     const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-//     const [showEndDatePicker, setShowEndDatePicker] = useState(false);
+//     // Fetch existing tiers
+//     useEffect(() => {
+//         if (!eventId) return;
+//         setLoading(true);
+//         fetch(`${API_ROUTE}/api/v1/event/ticket-tiers/${eventId}`)
+//             .then((r) => {
+//                 if (!r.ok) throw new Error("Failed to fetch tiers");
+//                 return r.json();
+//             })
+//             .then((json) => {
+//                 const existing = json.data.ticket_tiers;
+//                 setTiers(existing && existing.length ? existing : []);
+//             })
+//             .catch(() => {
+//                 setTiers([]);
+//             })
+//             .finally(() => setLoading(false));
+//     }, [eventId]);
 
-//     const handleChange = (name: keyof FormData, value: string) => {
-//         setFormData((prev) => ({ ...prev, [name]: value }));
+//     // Handlers
+//     const handleTierChange = (idx: number, field: keyof Tier, val: string) => {
+//         const copy = [...tiers];
+//         copy[idx][field] =
+//             field === "price" || field === "capacity" ? (val === "" ? "" : Number(val)) : val;
+//         setTiers(copy);
 //     };
 
-//     const handleToggle = (name: keyof FormData, value: boolean) => {
-//         setFormData((prev) => ({ ...prev, [name]: value }));
+//     const handleAddTier = () =>
+//         setTiers([...tiers, { name: "", description: "", price: "", capacity: "", perks: "" }]);
+
+//     const handleRemoveTier = (idx: number) => setTiers(tiers.filter((_, i) => i !== idx));
+
+//     const validate = () => {
+//         const errs: { [key: string]: string } = {};
+//         tiers.forEach((t, i) => {
+//             if (!t.name) errs[`name${i}`] = "Name is required";
+//             if (typeof t.price !== "number" || t.price < 0) errs[`price${i}`] = "Valid price required";
+//             if (typeof t.capacity !== "number" || t.capacity < 1)
+//                 errs[`capacity${i}`] = "Valid capacity required";
+//         });
+//         setErrors(errs);
+//         return !Object.keys(errs).length;
 //     };
 
-//     const minStartDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
-//     const minEndDate = formData.startDate
-//         ? new Date(formData.startDate.getTime() + 24 * 60 * 60 * 1000)
-//         : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+//     const handleSubmit = async () => {
+//         if (!validate()) return;
+//         setLoading(true);
+//         const payload = tiers.map((t) => ({
+//             name: t.name,
+//             description: t.description,
+//             price: t.price,
+//             capacity: t.capacity,
+//             perks: typeof t.perks === 'string'
+//                 ? t.perks.split(",").map((p) => p.trim()).filter(Boolean)
+//                 : t.perks,
+//         }));
+//         try {
+//             const res = await fetch(
+//                 `${API_ROUTE}/api/v1/event/ticket-tiers/${eventId}`,
+//                 {
+//                     method: "PATCH",
+//                     headers: { "Content-Type": "application/json" },
+//                     body: JSON.stringify({ ticket_tiers: payload }),
+//                 }
+//             );
+//             if (!res.ok) throw new Error(await res.text());
+//             setIsEditing(false);
+//         } catch (err: any) {
+//             alert("Error saving: " + err.message);
+//         }
+//         setLoading(false);
+//     };
 
-//     const renderLabel = (text: string) => (
-//         <Text style={styles.label}>{text}</Text>
-//     );
+//     const showTiers = tiers.length > 0 ? tiers : [{ name: "", description: "", price: "", capacity: "", perks: "" }];
+
+//     if (loading) {
+//         return (
+//             <View style={{ alignItems: 'center', justifyContent: 'center', backgroundColor: colors.background }}>
+//                 <Text style={{ color: colors.text, fontSize: 16 }}>Loading...</Text>
+//             </View>
+//         );
+//     }
 
 //     return (
-
-//         <SafeAreaProvider>
-//             <SafeAreaView style={styles.container}>
-//                 <ScrollView>
-//                     <View >
-//                         <Text style={styles.note}>
-//                             Please note that participants will receive email, SMS, and WhatsApp messages after registration.
+//         <KeyboardAvoidingView
+//             style={{ backgroundColor: colors.background }}
+//             behavior={Platform.OS === "ios" ? "padding" : undefined}
+//         >
+//             <ScrollView
+//                 contentContainerStyle={{
+//                     padding: 18,
+//                     backgroundColor: colors.background,
+//                     minHeight: 320,
+//                 }}
+//                 keyboardShouldPersistTaps="handled"
+//             >
+//                 {/* VIEW MODE */}
+//                 {!isEditing ? (
+//                     <View style={[styles.card, { backgroundColor: colors.card }]}>
+//                         <Text style={[styles.heading, { color: colors.text }]}>
+//                             Ticket tiers for event{" "}
+//                             {eventName && <Text style={{ fontWeight: "bold", color: colors.button }}>{eventName}</Text>}
 //                         </Text>
-
-//                         {/* Registration Name */}
-//                         <View style={styles.row}>
-//                             {renderLabel('Registration Name *')}
-//                             <TextInput
-//                                 style={styles.input}
-//                                 placeholder="e.g. Event 001"
-//                                 value={formData.registrationName}
-//                                 onChangeText={(text) => handleChange('registrationName', text)}
-//                             />
+//                         <View style={{ borderTopWidth: 1, borderColor: colors.dropdownBackground, marginVertical: 12 }} />
+//                         {/* Table Header */}
+//                         <View style={styles.tableHeaderRow}>
+//                             {["Name", "Description", "Price", "Capacity", "Perks"].map((h) => (
+//                                 <Text
+//                                     key={h}
+//                                     style={[
+//                                         styles.tableHeader,
+//                                         { color: colors.secondaryText, borderColor: colors.dropdownBackground }
+//                                     ]}
+//                                 >
+//                                     {h}
+//                                 </Text>
+//                             ))}
 //                         </View>
-
-//                         {/* Registration Quantity */}
-//                         <View style={styles.row}>
-//                             {renderLabel('Registration Quantity *')}
-//                             <TextInput
-//                                 style={styles.input}
-//                                 placeholder="e.g. total ticket quantity"
-//                                 value={formData.quantity}
-//                                 onChangeText={(text) => handleChange('quantity', text)}
-//                                 keyboardType="numeric"
-//                             />
-//                         </View>
-
-//                         {/* Min and Max Qty */}
-//                         <View style={styles.row}>
-//                             {renderLabel('Min. Qty. *')}
-//                             <TextInput
-//                                 style={styles.input}
-//                                 placeholder="e.g. 1"
-//                                 value={formData.minQty}
-//                                 onChangeText={(text) => handleChange('minQty', text)}
-//                                 keyboardType="numeric"
-//                             />
-//                         </View>
-
-//                         <View style={styles.row}>
-//                             {renderLabel('Max. Qty. *')}
-//                             <TextInput
-//                                 style={styles.input}
-//                                 placeholder="e.g. 10"
-//                                 value={formData.maxQty}
-//                                 onChangeText={(text) => handleChange('maxQty', text)}
-//                                 keyboardType="numeric"
-//                             />
-//                         </View>
-
-//                         {/* Description */}
-//                         <View style={styles.row}>
-//                             {renderLabel('Description *')}
-//                             <TextInput
-//                                 style={[styles.input, { height: 80, textAlignVertical: 'top' }]}
-//                                 placeholder="Enter ticket description"
-//                                 value={formData.description}
-//                                 onChangeText={(text) => handleChange('description', text)}
-//                                 multiline
-//                             />
-//                         </View>
-
-//                         {/* Start Date */}
-//                         <View style={styles.row}>
-//                             {renderLabel('Start Date *')}
+//                         {/* Table Rows */}
+//                         {tiers.length === 0 ? (
+//                             // Always render this blank row when no data!
+//                             <View style={styles.tableRow}>
+//                                 <Text style={[styles.tableCell, { color: colors.text }]}></Text>
+//                                 <Text style={[styles.tableCell, { color: colors.secondaryText }]}>—</Text>
+//                                 <Text style={[styles.tableCell, { color: colors.text }]}></Text>
+//                                 <Text style={[styles.tableCell, { color: colors.text }]}></Text>
+//                                 <Text style={[styles.tableCell, { color: colors.text }]}></Text>
+//                             </View>
+//                         ) : (
+//                             showTiers.map((t, i) => (
+//                                 <View key={i} style={styles.tableRow}>
+//                                     <Text style={[styles.tableCell, { color: colors.text }]}>{t.name}</Text>
+//                                     <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{t.description || "—"}</Text>
+//                                     <Text style={[styles.tableCell, { color: colors.text }]}>{t.price}</Text>
+//                                     <Text style={[styles.tableCell, { color: colors.text }]}>{t.capacity}</Text>
+//                                     <Text style={[styles.tableCell, { color: colors.text }]}>
+//                                         {Array.isArray(t.perks) ? t.perks.join(", ") : t.perks}
+//                                     </Text>
+//                                 </View>
+//                             ))
+//                         )}
+//                         {/* Button */}
+//                         <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 20 }}>
 //                             <TouchableOpacity
-//                                 style={styles.dateInput}
-//                                 onPress={() => setShowStartDatePicker(true)}
+//                                 style={[styles.editBtn, { backgroundColor: colors.button }]}
+//                                 onPress={() => setIsEditing(true)}
 //                             >
-//                                 <Text>{formData.startDate ? formData.startDate.toDateString() : 'Select Date'}</Text>
-//                             </TouchableOpacity>
-//                             {showStartDatePicker && (
-//                                 <DateTimePicker
-//                                     value={formData.startDate || minStartDate}
-//                                     mode="date"
-//                                     minimumDate={minStartDate}
-//                                     display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-//                                     onChange={(_, selectedDate) => {
-//                                         setShowStartDatePicker(false);
-//                                         if (selectedDate) {
-//                                             setFormData((prev) => ({ ...prev, startDate: selectedDate }));
-//                                         }
-//                                     }}
-//                                 />
-//                             )}
-//                         </View>
-
-//                         {/* End Date */}
-//                         <View style={styles.row}>
-//                             {renderLabel('End Date *')}
-//                             <TouchableOpacity
-//                                 style={styles.dateInput}
-//                                 onPress={() => setShowEndDatePicker(true)}
-//                             >
-//                                 <Text>{formData.endDate ? formData.endDate.toDateString() : 'Select Date'}</Text>
-//                             </TouchableOpacity>
-//                             {showEndDatePicker && (
-//                                 <DateTimePicker
-//                                     value={formData.endDate || minEndDate}
-//                                     mode="date"
-//                                     minimumDate={minEndDate}
-//                                     display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-//                                     onChange={(_, selectedDate) => {
-//                                         setShowEndDatePicker(false);
-//                                         if (selectedDate) {
-//                                             setFormData((prev) => ({ ...prev, endDate: selectedDate }));
-//                                         }
-//                                     }}
-//                                 />
-//                             )}
-//                         </View>
-
-//                         {/* Show Remaining Qty */}
-//                         <View style={styles.row}>
-//                             {renderLabel('Show Remaining Qty')}
-//                             <Switch
-//                                 value={formData.showRemaining}
-//                                 onValueChange={(val) => handleToggle('showRemaining', val)}
-//                             />
-//                         </View>
-
-//                         {/* Team Registration */}
-//                         <View style={styles.row}>
-//                             {renderLabel('Team Registration')}
-//                             <Switch
-//                                 value={formData.teamRegistration}
-//                                 onValueChange={(val) => handleToggle('teamRegistration', val)}
-//                             />
-//                         </View>
-
-//                         {/* Buttons */}
-//                         <View style={styles.buttonContainer}>
-//                             <TouchableOpacity style={styles.cancelButton}>
-//                                 <Text style={styles.cancelButtonText}>Cancel</Text>
-//                             </TouchableOpacity>
-//                             <TouchableOpacity style={styles.nextButton}>
-//                                 <Text style={styles.nextButtonText}>Next</Text>
+//                                 <Text style={{ color: colors.buttonText, fontWeight: "bold" }}>Add / Edit Ticket Tiers</Text>
 //                             </TouchableOpacity>
 //                         </View>
 //                     </View>
-//                 </ScrollView>
-//             </SafeAreaView>
-//         </SafeAreaProvider>
-
+//                 ) : (
+//                     // EDIT MODE
+//                     <View style={[styles.card, { backgroundColor: colors.card }]}>
+//                         <Text style={[styles.heading, { color: colors.text }]}>
+//                             Editing tiers for event{" "}
+//                             {eventName && <Text style={{ fontWeight: "bold", color: colors.button }}>{eventName}</Text>}
+//                         </Text>
+//                         <View style={{ borderTopWidth: 1, borderColor: colors.dropdownBackground, marginVertical: 12 }} />
+//                         {tiers.map((tier, idx) => (
+//                             <View key={idx} style={[styles.tierEditBox, { borderColor: colors.dropdownBackground }]}>
+//                                 <View style={styles.editRow}>
+//                                     <Text style={{ fontWeight: "500", color: colors.button }}>
+//                                         Tier #{idx + 1}
+//                                     </Text>
+//                                     {tiers.length > 1 && (
+//                                         <TouchableOpacity onPress={() => handleRemoveTier(idx)} style={{ marginLeft: 8 }}>
+//                                             <Ionicons name="trash-outline" size={20} color={colors.cancelButton} />
+//                                         </TouchableOpacity>
+//                                     )}
+//                                 </View>
+//                                 {/* Row 1: Name, Description, Price */}
+//                                 <View style={styles.editGrid}>
+//                                     <TextInput
+//                                         placeholder="Name"
+//                                         placeholderTextColor={colors.secondaryText}
+//                                         style={[styles.inputSmall, { color: colors.text, borderColor: colors.dropdownBackground }]}
+//                                         value={tier.name}
+//                                         onChangeText={(v) => handleTierChange(idx, "name", v)}
+//                                     />
+//                                     <TextInput
+//                                         placeholder="Description"
+//                                         placeholderTextColor={colors.secondaryText}
+//                                         style={[styles.inputSmall, { color: colors.text, borderColor: colors.dropdownBackground }]}
+//                                         value={tier.description}
+//                                         onChangeText={(v) => handleTierChange(idx, "description", v)}
+//                                     />
+//                                     <TextInput
+//                                         placeholder="Price"
+//                                         placeholderTextColor={colors.secondaryText}
+//                                         style={[styles.inputSmall, { color: colors.text, borderColor: colors.dropdownBackground }]}
+//                                         value={tier.price ? String(tier.price) : ""}
+//                                         keyboardType="numeric"
+//                                         onChangeText={(v) => handleTierChange(idx, "price", v)}
+//                                     />
+//                                 </View>
+//                                 {/* Row 2: Capacity, Perks */}
+//                                 <View style={styles.editGrid}>
+//                                     <TextInput
+//                                         placeholder="Capacity"
+//                                         placeholderTextColor={colors.secondaryText}
+//                                         style={[styles.inputSmall, { color: colors.text, borderColor: colors.dropdownBackground }]}
+//                                         value={tier.capacity ? String(tier.capacity) : ""}
+//                                         keyboardType="numeric"
+//                                         onChangeText={(v) => handleTierChange(idx, "capacity", v)}
+//                                     />
+//                                     <TextInput
+//                                         placeholder="Perks (comma-separated)"
+//                                         placeholderTextColor={colors.secondaryText}
+//                                         style={[styles.inputSmall, { color: colors.text, borderColor: colors.dropdownBackground }]}
+//                                         value={tier.perks}
+//                                         onChangeText={(v) => handleTierChange(idx, "perks", v)}
+//                                     />
+//                                 </View>
+//                                 {/* Errors */}
+//                                 {["name", "price", "capacity"].map(field =>
+//                                     errors[`${field}${idx}`] ? (
+//                                         <Text key={field} style={styles.errorText}>{errors[`${field}${idx}`]}</Text>
+//                                     ) : null
+//                                 )}
+//                             </View>
+//                         ))}
+//                         {/* Bottom Buttons */}
+//                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+//                             <TouchableOpacity style={styles.addTierBtn} onPress={handleAddTier}>
+//                                 <Text style={{ color: colors.button, fontWeight: "bold" }}>+ Add another tier</Text>
+//                             </TouchableOpacity>
+//                             <View style={{ flexDirection: "row" }}>
+//                                 <TouchableOpacity
+//                                     style={[styles.cancelBtn, { borderColor: colors.cancelButton }]}
+//                                     onPress={() => setIsEditing(false)}
+//                                 >
+//                                     <Text style={{ color: colors.cancelButtonText, fontWeight: "bold" }}>Cancel</Text>
+//                                 </TouchableOpacity>
+//                                 <TouchableOpacity
+//                                     style={[styles.saveBtn, { backgroundColor: colors.button }]}
+//                                     onPress={handleSubmit}
+//                                     disabled={loading}
+//                                 >
+//                                     <Text style={{ color: colors.buttonText, fontWeight: "bold" }}>
+//                                         {loading ? "Saving..." : "Save Tiers"}
+//                                     </Text>
+//                                 </TouchableOpacity>
+//                             </View>
+//                         </View>
+//                     </View>
+//                 )}
+//             </ScrollView>
+//         </KeyboardAvoidingView>
 //     );
-// };
-
-// export default TicketRegistrationForm;
+// }
 
 // const styles = StyleSheet.create({
-//     container: {
-//         minHeight: 520,
-//         backgroundColor: '#fff',
-//         borderRadius: 8,
+//     card: {
+//         padding: 18,
+//         borderRadius: 10,
+//         marginVertical: 14,
+//         elevation: 2,
 //     },
-//     note: {
-//         fontSize: 14,
-//         color: '#E36A6C',
-//         marginBottom: 16,
-//     },
-//     row: {
+//     heading: {
+//         fontSize: 18,
+//         fontWeight: "700",
 //         marginBottom: 12,
 //     },
-//     label: {
-//         fontSize: 14,
-//         fontWeight: '500',
-//         marginBottom: 4,
-//         color: '#333',
+//     tableHeaderRow: {
+//         flexDirection: "row",
+//         alignItems: 'center',
+//         marginBottom: 0,
+//         borderBottomWidth: 1,
+//         borderColor: "#555",
+//         backgroundColor: "transparent",
 //     },
-//     input: {
-//         borderWidth: 1,
-//         borderColor: '#ccc',
-//         borderRadius: 6,
-//         padding: 8,
-//         fontSize: 14,
+//     tableHeader: {
+//         // flex: 1,
+//         fontWeight: "bold",
+//         fontSize: 15,
+//         borderBottomWidth: 0,
+//         paddingBottom: 8,
+//         paddingHorizontal: 4,
 //     },
-//     dateInput: {
+//     tableRow: {
+//         flexDirection: "row",
+//         alignItems: 'center',
+//         paddingVertical: 12,
+//         borderBottomWidth: 1,
+//         borderColor: "#555",
+//     },
+//     tableCell: {
+//         // flex: 1,
+//         fontSize: 14,
+//         paddingHorizontal: 4,
+//     },
+//     editBtn: {
+//         paddingHorizontal: 20,
+//         paddingVertical: 10,
+//         borderRadius: 8,
+//     },
+//     tierEditBox: {
 //         borderWidth: 1,
-//         borderColor: '#ccc',
-//         borderRadius: 6,
+//         borderRadius: 8,
 //         padding: 12,
-//         justifyContent: 'center',
+//         marginBottom: 18,
 //     },
-//     buttonContainer: {
-//         flexDirection: 'row',
-//         justifyContent: 'space-between',
-//         marginTop: 16,
+//     editRow: {
+//         flexDirection: "row",
+//         alignItems: "center",
+//         marginBottom: 6,
 //     },
-//     cancelButton: {
+//     editGrid: {
+//         flexDirection: "row",
+//         flexWrap: "wrap",
+//         justifyContent: "flex-start",
+//         gap: 10,
+//         marginBottom: 4,
+//     },
+//     inputSmall: {
 //         borderWidth: 1,
-//         borderColor: '#ccc',
 //         borderRadius: 6,
-//         paddingVertical: 10,
-//         paddingHorizontal: 20,
-//         flex: 1,
+//         padding: 10,
+//         marginBottom: 5,
+//         minWidth: 140,
+//         flexGrow: 1,
+//         fontSize: 15,
 //         marginRight: 8,
-//         alignItems: 'center',
 //     },
-//     cancelButtonText: {
-//         color: '#333',
+//     addTierBtn: {
+//         alignItems: "flex-start",
+//         paddingLeft: 2,
 //     },
-//     nextButton: {
-//         backgroundColor: '#4CAF50',
-//         borderRadius: 6,
+//     cancelBtn: {
+//         borderWidth: 1,
+//         borderRadius: 8,
 //         paddingVertical: 10,
-//         paddingHorizontal: 20,
-//         flex: 1,
-//         marginLeft: 8,
-//         alignItems: 'center',
+//         paddingHorizontal: 16,
+//         marginRight: 12,
+//         marginLeft: 12,
 //     },
-//     nextButtonText: {
-//         color: '#fff',
-//         fontWeight: 'bold',
+//     saveBtn: {
+//         borderRadius: 8,
+//         paddingVertical: 10,
+//         paddingHorizontal: 18,
+//     },
+//     errorText: {
+//         color: "#E53935",
+//         fontSize: 12,
+//         marginBottom: 4,
+//         marginTop: -2,
 //     },
 // });
 
 
-import DateTimePicker from '@react-native-community/datetimepicker';
-import React, { useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from "react";
+import {
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View
+} from "react-native";
+import { Button, Snackbar } from "react-native-paper";
 import { Colors } from "../../constants/Colors";
 import { useGlobalInfo } from "../../context/GlobalContext";
+import { API_ROUTE } from "../../lib/config";
 
-interface FormData {
-    registrationName: string;
-    quantity: string;
-    minQty: string;
-    maxQty: string;
+type Tier = {
+    name: string;
     description: string;
-    startDate: Date | null;
-    endDate: Date | null;
-    showRemaining: boolean;
-    teamRegistration: boolean;
-}
-
-const TicketRegistrationForm: React.FC = () => {
-    const [formData, setFormData] = useState<FormData>({
-        registrationName: '',
-        quantity: '',
-        minQty: '',
-        maxQty: '',
-        description: '',
-        startDate: null,
-        endDate: null,
-        showRemaining: true,
-        teamRegistration: false,
-    });
-
-    const [showStartDatePicker, setShowStartDatePicker] = useState(false);
-    const [showEndDatePicker, setShowEndDatePicker] = useState(false);
-
-    const { theme } = useGlobalInfo();
-
-    const handleChange = (name: keyof FormData, value: string) => {
-        setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const handleToggle = (name: keyof FormData, value: boolean) => {
-        setFormData((prev) => ({ ...prev, [name]: value }));
-    };
-
-    const minStartDate = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const minEndDate = formData.startDate
-        ? new Date(formData.startDate.getTime() + 24 * 60 * 60 * 1000)
-        : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
-
-    const renderLabel = (text: string) => (
-        <Text style={[styles.label, { color: Colors[theme].secondaryText }]}>{text}</Text>
-    );
-
-    return (
-        <SafeAreaProvider>
-            <SafeAreaView style={[styles.container, { backgroundColor: Colors[theme].background }]}>
-                <ScrollView>
-                    <View >
-                        <Text style={[styles.note, { color: Colors[theme].button }]}>
-                            Please note that participants will receive email, SMS, and WhatsApp messages after registration.
-                        </Text>
-
-                        {/* Registration Name */}
-                        <View style={styles.row}>
-                            {renderLabel('Registration Name *')}
-                            <TextInput
-                                style={[
-                                    styles.input,
-                                    {
-                                        backgroundColor: Colors[theme].dropdownBackground,
-                                        borderColor: Colors[theme].secondaryText,
-                                        color: Colors[theme].text
-                                    }
-                                ]}
-                                placeholder="e.g. Event 001"
-                                placeholderTextColor={Colors[theme].secondaryText}
-                                value={formData.registrationName}
-                                onChangeText={(text) => handleChange('registrationName', text)}
-                            />
-                        </View>
-
-                        {/* Registration Quantity */}
-                        <View style={styles.row}>
-                            {renderLabel('Registration Quantity *')}
-                            <TextInput
-                                style={[
-                                    styles.input,
-                                    {
-                                        backgroundColor: Colors[theme].dropdownBackground,
-                                        borderColor: Colors[theme].secondaryText,
-                                        color: Colors[theme].text
-                                    }
-                                ]}
-                                placeholder="e.g. total ticket quantity"
-                                placeholderTextColor={Colors[theme].secondaryText}
-                                value={formData.quantity}
-                                onChangeText={(text) => handleChange('quantity', text)}
-                                keyboardType="numeric"
-                            />
-                        </View>
-
-                        {/* Min and Max Qty */}
-                        <View style={styles.row}>
-                            {renderLabel('Min. Qty. *')}
-                            <TextInput
-                                style={[
-                                    styles.input,
-                                    {
-                                        backgroundColor: Colors[theme].dropdownBackground,
-                                        borderColor: Colors[theme].secondaryText,
-                                        color: Colors[theme].text
-                                    }
-                                ]}
-                                placeholder="e.g. 1"
-                                placeholderTextColor={Colors[theme].secondaryText}
-                                value={formData.minQty}
-                                onChangeText={(text) => handleChange('minQty', text)}
-                                keyboardType="numeric"
-                            />
-                        </View>
-
-                        <View style={styles.row}>
-                            {renderLabel('Max. Qty. *')}
-                            <TextInput
-                                style={[
-                                    styles.input,
-                                    {
-                                        backgroundColor: Colors[theme].dropdownBackground,
-                                        borderColor: Colors[theme].secondaryText,
-                                        color: Colors[theme].text
-                                    }
-                                ]}
-                                placeholder="e.g. 10"
-                                placeholderTextColor={Colors[theme].secondaryText}
-                                value={formData.maxQty}
-                                onChangeText={(text) => handleChange('maxQty', text)}
-                                keyboardType="numeric"
-                            />
-                        </View>
-
-                        {/* Description */}
-                        <View style={styles.row}>
-                            {renderLabel('Description *')}
-                            <TextInput
-                                style={[
-                                    styles.input,
-                                    {
-                                        backgroundColor: Colors[theme].dropdownBackground,
-                                        borderColor: Colors[theme].secondaryText,
-                                        color: Colors[theme].text,
-                                        height: 80,
-                                        textAlignVertical: 'top'
-                                    }
-                                ]}
-                                placeholder="Enter ticket description"
-                                placeholderTextColor={Colors[theme].secondaryText}
-                                value={formData.description}
-                                onChangeText={(text) => handleChange('description', text)}
-                                multiline
-                            />
-                        </View>
-
-                        {/* Start Date */}
-                        <View style={styles.row}>
-                            {renderLabel('Start Date *')}
-                            <TouchableOpacity
-                                style={[
-                                    styles.dateInput,
-                                    {
-                                        backgroundColor: Colors[theme].dropdownBackground,
-                                        borderColor: Colors[theme].secondaryText
-                                    }
-                                ]}
-                                onPress={() => setShowStartDatePicker(true)}
-                            >
-                                <Text style={{ color: Colors[theme].text }}>
-                                    {formData.startDate ? formData.startDate.toDateString() : 'Select Date'}
-                                </Text>
-                            </TouchableOpacity>
-                            {showStartDatePicker && (
-                                <DateTimePicker
-                                    value={formData.startDate || minStartDate}
-                                    mode="date"
-                                    minimumDate={minStartDate}
-                                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                    onChange={(_, selectedDate) => {
-                                        setShowStartDatePicker(false);
-                                        if (selectedDate) {
-                                            setFormData((prev) => ({ ...prev, startDate: selectedDate }));
-                                        }
-                                    }}
-                                />
-                            )}
-                        </View>
-
-                        {/* End Date */}
-                        <View style={styles.row}>
-                            {renderLabel('End Date *')}
-                            <TouchableOpacity
-                                style={[
-                                    styles.dateInput,
-                                    {
-                                        backgroundColor: Colors[theme].dropdownBackground,
-                                        borderColor: Colors[theme].secondaryText
-                                    }
-                                ]}
-                                onPress={() => setShowEndDatePicker(true)}
-                            >
-                                <Text style={{ color: Colors[theme].text }}>
-                                    {formData.endDate ? formData.endDate.toDateString() : 'Select Date'}
-                                </Text>
-                            </TouchableOpacity>
-                            {showEndDatePicker && (
-                                <DateTimePicker
-                                    value={formData.endDate || minEndDate}
-                                    mode="date"
-                                    minimumDate={minEndDate}
-                                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                                    onChange={(_, selectedDate) => {
-                                        setShowEndDatePicker(false);
-                                        if (selectedDate) {
-                                            setFormData((prev) => ({ ...prev, endDate: selectedDate }));
-                                        }
-                                    }}
-                                />
-                            )}
-                        </View>
-
-                        {/* Show Remaining Qty */}
-                        <View style={styles.row}>
-                            {renderLabel('Show Remaining Qty')}
-                            <Switch
-                                value={formData.showRemaining}
-                                onValueChange={(val) => handleToggle('showRemaining', val)}
-                                trackColor={{ false: Colors[theme].cancelButton, true: Colors[theme].button }}
-                                thumbColor={formData.showRemaining ? Colors[theme].button : Colors[theme].cancelButton}
-                            />
-                        </View>
-
-                        {/* Team Registration */}
-                        <View style={styles.row}>
-                            {renderLabel('Team Registration')}
-                            <Switch
-                                value={formData.teamRegistration}
-                                onValueChange={(val) => handleToggle('teamRegistration', val)}
-                                trackColor={{ false: Colors[theme].cancelButton, true: Colors[theme].button }}
-                                thumbColor={formData.teamRegistration ? Colors[theme].button : Colors[theme].cancelButton}
-                            />
-                        </View>
-
-                        {/* Buttons */}
-                        <View style={styles.buttonContainer}>
-                            <TouchableOpacity
-                                style={[
-                                    styles.cancelButton,
-                                    {
-                                        borderColor: Colors[theme].cancelButton,
-                                    }
-                                ]}
-                            >
-                                <Text style={[styles.cancelButtonText, { color: Colors[theme].cancelButtonText }]}>
-                                    Cancel
-                                </Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                                style={[
-                                    styles.nextButton,
-                                    { backgroundColor: Colors[theme].button }
-                                ]}
-                            >
-                                <Text style={[styles.nextButtonText, { color: Colors[theme].buttonText }]}>
-                                    Next
-                                </Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                </ScrollView>
-            </SafeAreaView>
-        </SafeAreaProvider>
-    );
+    price: number | string;
+    capacity: number | string;
+    perks: string;
 };
 
-export default TicketRegistrationForm;
+export default function TicketRegistrationForm({ eventName = "Event" }) {
+    const { event: eventId, theme } = useGlobalInfo();
+    const colors = Colors[theme];
+
+    const [tiers, setTiers] = useState<Tier[]>([]);
+    const [errors, setErrors] = useState<{ [key: string]: string }>({});
+    const [isEditing, setIsEditing] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [snackbar, setSnackbar] = useState({ visible: false, message: '', error: false });
+
+    // Fetch existing tiers
+    useEffect(() => {
+        if (!eventId) return;
+        setLoading(true);
+        fetch(`${API_ROUTE}/api/v1/event/ticket-tiers/${eventId}`)
+            .then((r) => {
+                if (!r.ok) throw new Error("Failed to fetch tiers");
+                return r.json();
+            })
+            .then((json) => {
+                const existing = json.data.ticket_tiers;
+                setTiers(existing && existing.length
+                    ? existing
+                    : [{ name: "", description: "", price: "", capacity: "", perks: "" }]
+                );
+            })
+            .catch(() => {
+                setTiers([{ name: "", description: "", price: "", capacity: "", perks: "" }]);
+                setSnackbar({ visible: true, message: "Failed to load ticket tiers.", error: true });
+            })
+            .finally(() => setLoading(false));
+    }, [eventId]);
+
+    // Handlers
+    const handleTierChange = (idx: number, field: keyof Tier, val: string) => {
+        const copy = [...tiers];
+        copy[idx][field] =
+            field === "price" || field === "capacity"
+                ? (val === "" ? "" : Number(val))
+                : val;
+        setTiers(copy);
+    };
+
+    const handleAddTier = () =>
+        setTiers([...tiers, { name: "", description: "", price: "", capacity: "", perks: "" }]);
+
+    const handleRemoveTier = (idx: number) => setTiers(tiers.filter((_, i) => i !== idx));
+
+    const validate = () => {
+        const errs: { [key: string]: string } = {};
+        tiers.forEach((t, i) => {
+            if (!t.name) errs[`name${i}`] = "Name is required";
+            if (typeof t.price !== "number" || t.price < 0) errs[`price${i}`] = "Valid price required";
+            if (typeof t.capacity !== "number" || t.capacity < 1)
+                errs[`capacity${i}`] = "Valid capacity required";
+        });
+        setErrors(errs);
+        return !Object.keys(errs).length;
+    };
+
+    const handleSubmit = async () => {
+        if (!validate()) return;
+        setLoading(true);
+        const payload = tiers.map((t) => ({
+            name: t.name,
+            description: t.description,
+            price: t.price,
+            capacity: t.capacity,
+            perks: typeof t.perks === 'string'
+                ? t.perks.split(",").map((p) => p.trim()).filter(Boolean)
+                : t.perks,
+        }));
+        try {
+            const res = await fetch(
+                `${API_ROUTE}/api/v1/event/ticket-tiers/${eventId}`,
+                {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ticket_tiers: payload }),
+                }
+            );
+            if (!res.ok) throw new Error(await res.text());
+            setIsEditing(false);
+            setSnackbar({ visible: true, message: "Tiers saved.", error: false });
+        } catch (err: any) {
+            setSnackbar({ visible: true, message: "Error saving: " + err.message, error: true });
+        }
+        setLoading(false);
+    };
+
+    // For table layout in RN, use flex row with fixed minWidths for cells
+    const cellStyle = (width = 90) => ({
+        minWidth: width,
+        paddingVertical: 6,
+        paddingHorizontal: 3,
+        flexGrow: 1,
+    });
+
+    // Render
+    return (
+        <KeyboardAvoidingView
+            style={{ backgroundColor: colors.background }}
+            behavior={Platform.OS === "ios" ? "padding" : undefined}
+        >
+            <ScrollView
+                contentContainerStyle={{
+                    padding: 18,
+                    backgroundColor: colors.background,
+                    minHeight: 320,
+                }}
+                keyboardShouldPersistTaps="handled"
+            >
+                {/* VIEW MODE */}
+                {!isEditing ? (
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        <Text style={[styles.heading, { color: colors.text }]}>
+                            Ticket tiers for event{" "}
+                            <Text style={{ fontWeight: "bold", color: colors.button }}>{eventName}</Text>
+                        </Text>
+                        <View style={{ borderTopWidth: 1, borderColor: colors.dropdownBackground, marginVertical: 12 }} />
+                        {/* Table Header */}
+                        <View style={[styles.tableHeaderRow, { borderColor: colors.dropdownBackground }]}>
+                            {["Name", "Description", "Price", "Capacity", "Perks"].map((h, i) => (
+                                <Text
+                                    key={h}
+                                    style={[
+                                        styles.tableHeader,
+                                        cellStyle(i === 1 ? 120 : 90),
+                                        { color: colors.secondaryText }
+                                    ]}
+                                >
+                                    {h}
+                                </Text>
+                            ))}
+                        </View>
+                        {/* Table Rows */}
+                        {tiers.map((t, i) => (
+                            <View key={i} style={[styles.tableRow, { borderColor: colors.dropdownBackground }]}>
+                                <Text style={[styles.tableCell, cellStyle(), { color: colors.text }]}>{t.name}</Text>
+                                <Text style={[styles.tableCell, cellStyle(120), { color: colors.secondaryText }]}>{t.description || "—"}</Text>
+                                <Text style={[styles.tableCell, cellStyle(), { color: colors.text }]}>{t.price}</Text>
+                                <Text style={[styles.tableCell, cellStyle(), { color: colors.text }]}>{t.capacity}</Text>
+                                <Text style={[styles.tableCell, cellStyle(130), { color: colors.text }]}>
+                                    {Array.isArray(t.perks) ? t.perks.join(", ") : t.perks}
+                                </Text>
+                            </View>
+                        ))}
+                        {/* Button */}
+                        <View style={{ flexDirection: "row", justifyContent: "flex-end", marginTop: 20 }}>
+                            <Button
+                                mode="contained"
+                                onPress={() => setIsEditing(true)}
+                                buttonColor={colors.button}
+                                textColor={colors.buttonText}
+                                style={{ borderRadius: 8 }}
+                            >
+                                Add / Edit Ticket Tiers
+                            </Button>
+                        </View>
+                    </View>
+                ) : (
+                    // EDIT MODE
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        <Text style={[styles.heading, { color: colors.text }]}>
+                            Editing tiers for event{" "}
+                            <Text style={{ fontWeight: "bold", color: colors.button }}>{eventName}</Text>
+                        </Text>
+                        <View style={{ borderTopWidth: 1, borderColor: colors.dropdownBackground, marginVertical: 12 }} />
+                        {tiers.map((tier, idx) => (
+                            <View key={idx} style={[styles.tierEditBox, { borderColor: colors.dropdownBackground }]}>
+                                <View style={styles.editRow}>
+                                    <Text style={{ fontWeight: "500", color: colors.button }}>
+                                        Tier #{idx + 1}
+                                    </Text>
+                                    {tiers.length > 1 && (
+                                        <TouchableOpacity onPress={() => handleRemoveTier(idx)} style={{ marginLeft: 8 }}>
+                                            <Ionicons name="trash-outline" size={20} color={colors.cancelButton} />
+                                        </TouchableOpacity>
+                                    )}
+                                </View>
+                                {/* Row 1: Name, Description, Price */}
+                                <View style={styles.editGrid}>
+                                    <TextInput
+                                        placeholder="Name"
+                                        placeholderTextColor={colors.secondaryText}
+                                        style={[styles.inputSmall, { color: colors.text, borderColor: colors.dropdownBackground }]}
+                                        value={tier.name}
+                                        onChangeText={(v) => handleTierChange(idx, "name", v)}
+                                    />
+                                    <TextInput
+                                        placeholder="Description"
+                                        placeholderTextColor={colors.secondaryText}
+                                        style={[styles.inputSmall, { color: colors.text, borderColor: colors.dropdownBackground }]}
+                                        value={tier.description}
+                                        onChangeText={(v) => handleTierChange(idx, "description", v)}
+                                    />
+                                    <TextInput
+                                        placeholder="Price"
+                                        placeholderTextColor={colors.secondaryText}
+                                        style={[styles.inputSmall, { color: colors.text, borderColor: colors.dropdownBackground }]}
+                                        value={tier.price ? String(tier.price) : ""}
+                                        keyboardType="numeric"
+                                        onChangeText={(v) => handleTierChange(idx, "price", v)}
+                                    />
+                                </View>
+                                {/* Row 2: Capacity, Perks */}
+                                <View style={styles.editGrid}>
+                                    <TextInput
+                                        placeholder="Capacity"
+                                        placeholderTextColor={colors.secondaryText}
+                                        style={[styles.inputSmall, { color: colors.text, borderColor: colors.dropdownBackground }]}
+                                        value={tier.capacity ? String(tier.capacity) : ""}
+                                        keyboardType="numeric"
+                                        onChangeText={(v) => handleTierChange(idx, "capacity", v)}
+                                    />
+                                    <TextInput
+                                        placeholder="Perks (comma-separated)"
+                                        placeholderTextColor={colors.secondaryText}
+                                        style={[styles.inputSmall, { color: colors.text, borderColor: colors.dropdownBackground }]}
+                                        value={tier.perks}
+                                        onChangeText={(v) => handleTierChange(idx, "perks", v)}
+                                    />
+                                </View>
+                                {/* Errors */}
+                                {["name", "price", "capacity"].map(field =>
+                                    errors[`${field}${idx}`] ? (
+                                        <Text key={field} style={styles.errorText}>{errors[`${field}${idx}`]}</Text>
+                                    ) : null
+                                )}
+                            </View>
+                        ))}
+                        {/* Bottom Buttons */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <TouchableOpacity style={styles.addTierBtn} onPress={handleAddTier}>
+                                <Text style={{ color: colors.button, fontWeight: "bold" }}>+ Add another tier</Text>
+                            </TouchableOpacity>
+                            <View style={{ flexDirection: "row" }}>
+                                <TouchableOpacity
+                                    style={[styles.cancelBtn, { borderColor: colors.cancelButton }]}
+                                    onPress={() => setIsEditing(false)}
+                                >
+                                    <Text style={{ color: colors.cancelButtonText, fontWeight: "bold" }}>Cancel</Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[styles.saveBtn, { backgroundColor: colors.button }]}
+                                    onPress={handleSubmit}
+                                    disabled={loading}
+                                >
+                                    <Text style={{ color: colors.buttonText, fontWeight: "bold" }}>
+                                        {loading ? "Saving..." : "Save Tiers"}
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    </View>
+                )}
+                <Snackbar
+                    visible={snackbar.visible}
+                    onDismiss={() => setSnackbar(s => ({ ...s, visible: false }))}
+                    duration={2200}
+                    style={{ backgroundColor: snackbar.error ? colors.cancelButton : colors.button }}
+                >
+                    {snackbar.message}
+                </Snackbar>
+            </ScrollView>
+        </KeyboardAvoidingView>
+    );
+}
 
 const styles = StyleSheet.create({
-    container: {
-        minHeight: 600,
-        borderRadius: 8,
+    card: {
+        padding: 18,
+        borderRadius: 10,
+        marginVertical: 14,
+        elevation: 2,
     },
-    note: {
-        fontSize: 14,
-        marginBottom: 16,
-    },
-    row: {
+    heading: {
+        fontSize: 18,
+        fontWeight: "700",
         marginBottom: 12,
     },
-    label: {
+    tableHeaderRow: {
+        flexDirection: "row",
+        alignItems: 'center',
+        marginBottom: 0,
+        borderBottomWidth: 1,
+        backgroundColor: "transparent",
+    },
+    tableHeader: {
+        fontWeight: "bold",
+        fontSize: 15,
+        borderBottomWidth: 0,
+        paddingBottom: 8,
+        paddingHorizontal: 4,
+    },
+    tableRow: {
+        flexDirection: "row",
+        alignItems: 'center',
+        paddingVertical: 12,
+        borderBottomWidth: 1,
+    },
+    tableCell: {
         fontSize: 14,
-        fontWeight: '500',
+        paddingHorizontal: 4,
+    },
+    tierEditBox: {
+        borderWidth: 1,
+        borderRadius: 8,
+        padding: 12,
+        marginBottom: 18,
+    },
+    editRow: {
+        flexDirection: "row",
+        alignItems: "center",
+        marginBottom: 6,
+    },
+    editGrid: {
+        flexDirection: "row",
+        flexWrap: "wrap",
+        justifyContent: "flex-start",
+        gap: 10,
         marginBottom: 4,
     },
-    input: {
+    inputSmall: {
         borderWidth: 1,
         borderRadius: 6,
-        padding: 8,
-        fontSize: 14,
-    },
-    dateInput: {
-        borderWidth: 1,
-        borderRadius: 6,
-        padding: 12,
-        justifyContent: 'center',
-    },
-    buttonContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginTop: 16,
-    },
-    cancelButton: {
-        borderWidth: 1,
-        borderRadius: 6,
-        paddingVertical: 10,
-        paddingHorizontal: 20,
-        flex: 1,
+        padding: 10,
+        marginBottom: 5,
+        minWidth: 140,
+        flexGrow: 1,
+        fontSize: 15,
         marginRight: 8,
-        alignItems: 'center',
     },
-    cancelButtonText: {
+    addTierBtn: {
+        alignItems: "flex-start",
+        paddingLeft: 2,
     },
-    nextButton: {
-        borderRadius: 6,
+    cancelBtn: {
+        borderWidth: 1,
+        borderRadius: 8,
         paddingVertical: 10,
-        paddingHorizontal: 20,
-        flex: 1,
-        marginLeft: 8,
-        alignItems: 'center',
+        paddingHorizontal: 16,
+        marginRight: 12,
+        marginLeft: 12,
     },
-    nextButtonText: {
-        fontWeight: 'bold',
+    saveBtn: {
+        borderRadius: 8,
+        paddingVertical: 10,
+        paddingHorizontal: 18,
+    },
+    errorText: {
+        color: "#E53935",
+        fontSize: 12,
+        marginBottom: 4,
+        marginTop: -2,
     },
 });

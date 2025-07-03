@@ -436,7 +436,9 @@
 
 
 
+import { Feather, MaterialIcons } from '@expo/vector-icons';
 import { useRoute } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
     Dimensions,
@@ -463,6 +465,7 @@ export default function Event() {
     const { theme } = context;
     const colors = Colors[theme];
     const route = useRoute();
+    const router = useRouter();
     const params: any = route?.params || "";
     const id: string = params?.eventId;
     const userId = context?.userId;
@@ -471,6 +474,7 @@ export default function Event() {
     const [loading, setLoading] = useState(true);
     const [modalOpen, setModalOpen] = useState(false);
     const [poll, setPoll] = useState({ question: '', options: [''] });
+    const [imageSize, setImageSize] = useState('medium');
     const [snackbar, setSnackbar] = useState({
         visible: false,
         message: '',
@@ -479,7 +483,7 @@ export default function Event() {
 
     // Event Status Dropdown
     const [statusMenuVisible, setStatusMenuVisible] = useState(false);
-    const [eventStatus, setEventStatus] = useState("PUBLISHED");
+    const [eventStatus, setEventStatus] = useState("");
 
     useEffect(() => {
         const fetchEvent = async () => {
@@ -488,6 +492,8 @@ export default function Event() {
                 if (!res.ok) throw new Error('Event not found');
                 const data = await res.json();
                 setEvent(data?.data);
+                setEventStatus(data?.data?.status.toUpperCase() || "PUBLISHED");
+                console.log(data.data);
             } catch (err) {
                 setEvent(null);
             } finally {
@@ -514,6 +520,36 @@ export default function Event() {
     const addPollOption = () => {
         setPoll({ ...poll, options: [...poll.options, ''] });
     };
+
+    const getImageHeight = () => {
+        switch (imageSize) {
+            case 'small': return 150;
+            case 'large': return 350;
+            default: return 250;
+        }
+    };
+
+    const handleEditEvent = () => {
+        router.push("/create-event");
+    };
+
+    const handleDeleteEvent = async () => {
+        try {
+            const res = await fetch(`${API_ROUTE}/api/v1/event/eventid/${id}`, {
+                method: 'DELETE',
+            });
+            if (res.ok) {
+                showSnackbar('Event deleted!', 'success');
+                // Optional: navigate away
+                setTimeout(() => router.replace("/dashboard"), 1000);
+            } else {
+                throw new Error('Failed to delete event');
+            }
+        } catch (err) {
+            showSnackbar(err.message || 'Failed to delete event', 'error');
+        }
+    };
+
 
     const handlePollSubmit = async () => {
         const validOptions = poll.options.filter(opt => opt.trim() !== '');
@@ -568,11 +604,27 @@ export default function Event() {
         );
     }
 
+    const updateEventStatus = async (newStatus) => {
+        try {
+            const res = await fetch(`${API_ROUTE}/api/v1/event/eventid/${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus }),
+            });
+            if (!res.ok) throw new Error('Failed to update status');
+            setEventStatus(newStatus);
+            showSnackbar(`Event status updated to ${newStatus}`, 'success');
+        } catch (err) {
+            showSnackbar(err.message || 'Failed to update status', 'error');
+        }
+    };
+
     return (
         <SafeAreaProvider>
             <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
                 <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
                     {/* Event Name & Status Dropdown */}
+
                     <View style={styles.headerRow}>
                         <Text
                             style={[
@@ -602,25 +654,81 @@ export default function Event() {
                                     ]}
                                     onPress={() => setStatusMenuVisible(true)}
                                 >
-                                    <Text style={styles.statusDropdownText}>{eventStatus}</Text>
+                                    <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center" }}>
+                                        <Text style={styles.statusDropdownText}>{eventStatus}</Text>
+                                        <MaterialIcons
+                                            name={statusMenuVisible ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+                                            size={20}
+                                            color="#fff"
+                                            style={{ marginLeft: 2 }}
+                                        />
+                                    </View>
                                 </TouchableOpacity>
                             }
                         >
                             {["PUBLISHED", "PAUSED", "CANCELLED"].map((status) => (
                                 <Menu.Item
                                     key={status}
-                                    onPress={() => {
-                                        setEventStatus(status);
+                                    onPress={async () => {
                                         setStatusMenuVisible(false);
+                                        if (status !== eventStatus) {
+                                            await updateEventStatus(status);
+                                        }
                                     }}
                                     title={status}
+                                    leadingIcon={eventStatus === status ? "check" : undefined}
                                 />
                             ))}
                         </Menu>
                     </View>
 
+                    <View>
+                        <Image
+                            source={{ uri: event?.cover_image }}
+                            style={[styles.coverImage, { height: getImageHeight() }]}
+                            resizeMode="cover"
+                        />
+                        <Text style={[styles.note, { color: "#C11215" }]}>Please enter a picture of size 1280 x 720 px</Text>
+                    </View>
+
+                    {/* First row: Edit Event, Add Live Poll, delete event */}
+                    <View style={styles.actionRow}>
+                        <TouchableOpacity
+                            style={styles.actionItem}
+                            onPress={handleEditEvent}
+                        >
+                            <MaterialIcons name="edit" size={24} color={colors.button} />
+                            <Text style={[styles.actionText, { color: colors.button }]}>Edit Event</Text>
+                        </TouchableOpacity>
+
+                        {/* <TouchableOpacity
+                                style={styles.actionItem}
+                                onPress={() => router.push('/poll')}
+                            >
+                                <Ionicons name="chatbubbles-outline" size={24} color={colors.button} />
+                                <Text style={[styles.actionText, { color: colors.button }]}>Add Live Poll</Text>
+                            </TouchableOpacity> */}
+
+                        <TouchableOpacity
+                            style={styles.actionItem}
+                            onPress={handleDeleteEvent} // Implement this function!
+                        >
+                            <Feather name="trash-2" size={24} color="#E53935" />
+                            <Text style={[styles.actionText, { color: '#E53935' }]}>Delete Event</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    {/* Links (Shareable, Live, Feedback, Poll) */}
+                    {['Shareable Link URL', 'Live Count URL', 'Event Feedback URL', 'Live Poll URL'].map((label, idx) => (
+                        <View key={idx} style={styles.urlRow}>
+                            <Text style={[styles.urlLabel, { color: colors.text }]}>{label}</Text>
+                            <Text style={[styles.urlValue, { color: colors.button }]} numberOfLines={1}>https://in.explara.com/e/abc-event-oejqyfepdf92ob5</Text>
+                        </View>
+                    ))}
+
                     {/* Event Logo */}
                     <View style={styles.logoContainer}>
+                        <Text style={[styles.sectionTitle, { fontSize: 18, color: colors.button }]}>Event Logo</Text>
                         <Image
                             source={{ uri: event?.logo_image }}
                             style={styles.logoImage}
@@ -643,29 +751,6 @@ export default function Event() {
                         <Text style={{ color: colors.text }}>⏰ {event.start_time}</Text>
                     </View>
 
-                    {/* Links (Shareable, Live, Feedback, Poll) */}
-                    <Text style={[styles.sectionTitle, { color: colors.button }]}>IMPORTANT LINKS</Text>
-                    {['Shareable Link URL', 'Live Count URL', 'Event Feedback URL', 'Live Poll URL'].map((label, idx) => (
-                        <View key={idx} style={styles.urlRow}>
-                            <Text style={[styles.urlLabel, { color: colors.text }]}>{label}</Text>
-                            <Text style={[styles.urlValue, { color: colors.button }]} numberOfLines={1}>https://in.explara.com/e/abc-event-oejqyfepdf92ob5</Text>
-                        </View>
-                    ))}
-
-                    {/* Action Buttons */}
-                    <View style={styles.actionRow}>
-                        {['Edit Event', 'Preview', 'Add Live Poll'].map((label, index) => (
-                            <TouchableOpacity
-                                key={index}
-                                style={[styles.actionItem]}
-                                onPress={label === "Add Live Poll" ? () => setModalOpen(true) : undefined}
-                            >
-                                {/* <Image source={{ uri: '/svg/edit.svg' }} style={styles.icon} /> */}
-                                <Text style={[styles.actionText, { color: colors.button }]}>{label}</Text>
-                            </TouchableOpacity>
-                        ))}
-                    </View>
-
                     {/* Event Images Carousel */}
                     {event?.event_images && event.event_images.length > 0 && (
                         <>
@@ -686,17 +771,6 @@ export default function Event() {
                             </ScrollView>
                         </>
                     )}
-
-                    {/* SALES OVERVIEW */}
-                    <Text style={[styles.sectionTitle, { color: colors.button }]}>SALES OVERVIEW</Text>
-                    <View style={styles.salesRow}>
-                        {['REGISTERED', 'GUEST REGISTERED', 'VIEWS'].map((label, idx) => (
-                            <View key={idx} style={styles.salesItem}>
-                                <Text style={[styles.salesValue, { color: colors.button }]}>23</Text>
-                                <Text style={{ color: colors.secondaryText }}>{label}</Text>
-                            </View>
-                        ))}
-                    </View>
 
                     {/* Poll Modal */}
                     <Modal
@@ -808,9 +882,22 @@ const styles = StyleSheet.create({
         fontWeight: "bold",
         fontSize: 13,
         textAlign: "center",
+        marginRight: 2,
+    },
+    note: {
+        fontSize: 12,
+        textAlign: 'center',
+        marginBottom: 8,
+    },
+    coverImage: {
+        width: '100%',
+        borderRadius: 8,
+        marginBottom: 8,
     },
     logoContainer: {
-        alignItems: 'center',
+        flexDirection: "row",
+        gap: 80,
+        alignItems: "baseline",
         marginVertical: 16,
     },
     logoImage: {
@@ -821,16 +908,10 @@ const styles = StyleSheet.create({
         borderColor: '#ddd',
         backgroundColor: '#fff',
     },
-    sectionTitle: {
-        fontSize: 15,
-        fontWeight: '600',
-        marginTop: 14,
-        marginBottom: 8,
-    },
     overviewRow: {
         flexDirection: 'row',
         alignItems: 'center',
-        marginBottom: 4,
+        marginBottom: 10,
     },
     urlRow: {
         flexDirection: 'row',
@@ -848,30 +929,24 @@ const styles = StyleSheet.create({
     },
     actionRow: {
         flexDirection: 'row',
-        justifyContent: 'flex-start',
+        justifyContent: 'space-around',
         marginTop: 16,
-        marginBottom: 12,
-        gap: 18,
+        marginBottom: 18,
     },
     actionItem: {
+        flexDirection: "row",
+        gap: 10,
         alignItems: 'center',
     },
     actionText: {
         fontSize: 15,
         fontWeight: "600"
     },
-    salesRow: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginBottom: 16,
-        marginTop: 6,
-    },
-    salesItem: {
-        alignItems: 'center',
-    },
-    salesValue: {
-        fontSize: 16,
+    sectionTitle: {
+        fontSize: 14,
         fontWeight: '600',
+        marginTop: 12,
+        marginBottom: 4,
     },
     modalOverlay: {
         flex: 1,
@@ -910,8 +985,8 @@ const styles = StyleSheet.create({
         marginTop: 10,
     },
     carouselImage: {
-        width: 140,
-        height: 90,
+        width: 180,
+        height: 200,
         borderRadius: 8,
         marginRight: 10,
     },

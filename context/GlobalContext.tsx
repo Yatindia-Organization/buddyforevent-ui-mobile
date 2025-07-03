@@ -3,6 +3,7 @@ import { useColorScheme } from "react-native";
 
 type ThemeType = "light" | "dark";
 type ThemePreferenceType = "system" | "light" | "dark";
+type UserType = { [key: string]: any } | null;
 
 type GlobalContextType = {
     isLoggedIn: boolean;
@@ -18,7 +19,7 @@ type GlobalContextType = {
     changeUserId: (newState: string | null) => void;
 
     event: string;
-    changeEvent: (newState: string) => void;
+    changeEvent: (newState: string | null) => void;
 
     theme: ThemeType;
     setTheme: (newTheme: ThemeType) => void;
@@ -26,15 +27,18 @@ type GlobalContextType = {
     themePreference: ThemePreferenceType;
     setThemePreference: (pref: ThemePreferenceType) => void;
 
+    user: UserType;
+    changeUser: (user: UserType) => void;
+
+    token: string | null;
+    changeToken: (token: string | null) => void;
 };
 
 const GlobalContext = createContext<GlobalContextType | undefined>(undefined);
 
 export function useGlobalInfo() {
     const context = useContext(GlobalContext);
-    if (!context) {
-        throw new Error("useGlobalInfo must be used within a GlobalProvider");
-    }
+    if (!context) throw new Error("useGlobalInfo must be used within a GlobalProvider");
     return context;
 }
 
@@ -43,7 +47,10 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
     const [loginFlow, setLoginFlow] = useState(true);
     const [userType, setUserType] = useState<string>("admin");
     const [userId, setUserId] = useState<string | null>("");
-    const [event, setEvent] = useState<string>("");
+    const [event, setEvent] = useState<string | null>("");
+
+    const [user, setUser] = useState<UserType>(null);
+    const [token, setToken] = useState<string | null>(null);
 
     const [themePreference, setThemePreference] = useState<ThemePreferenceType>("system");
     const systemColorScheme = useColorScheme();
@@ -86,6 +93,11 @@ export const GlobalProvider = ({ children }: { children: React.ReactNode }) => {
         themePreference,
         setThemePreference,
 
+        user,
+        changeUser: setUser,
+
+        token,
+        changeToken: setToken,
     };
 
     return (

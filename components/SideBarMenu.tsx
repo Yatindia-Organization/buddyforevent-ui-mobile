@@ -19,7 +19,7 @@ const SidebarMenu = () => {
 
     const currentPath = "/" + segments.join("/");
 
-    const { isLoggedIn, userType, theme } = useGlobalInfo();
+    const { isLoggedIn, userType, theme, changeEvent, event } = useGlobalInfo();
 
     // If user is not logged in, do not render the sidebar at all
     if (!isLoggedIn) {
@@ -64,7 +64,9 @@ const SidebarMenu = () => {
                                         }
                                     ]}
                                     onPress={() => {
+                                        console.log(event, "sidebar");
                                         setVisible(false);
+                                        changeEvent(null);
                                         router.push(item.path);
                                     }}
                                 >
