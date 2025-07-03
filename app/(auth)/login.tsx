@@ -25,7 +25,14 @@ export default function LoginScreen() {
     const [loading, setLoading] = useState(false);
     const slideAnim = useState(new Animated.Value(-100))[0];
 
-    const { theme, changeIsLoggedIn, changeUserType, changeUserId } = useGlobalInfo();
+    const {
+        theme,
+        changeIsLoggedIn,
+        changeUserType,
+        changeUserId,
+        changeUser,
+        changeToken,
+    } = useGlobalInfo();
 
     const showTopSnackbar = (message: string) => {
         setSnackbarMessage(message);
@@ -80,18 +87,20 @@ export default function LoginScreen() {
             const data = await response.json();
 
             if (response.ok) {
+                const user = data?.data?.existingUser;
+                const token = data?.data?.token;
+                const userTypeFromApi = user?.user_type;
 
-                const userTypeFromApi = data?.data?.existingUser?.user_type;
-
-                if (userTypeFromApi) {
+                if (userTypeFromApi && token) {
                     changeUserType(userTypeFromApi);
                     changeIsLoggedIn(true);
-                    changeUserId(data?.data?.existingUser?._id);
+                    changeUserId(user?._id || null);
+                    changeUser(user || null);
+                    changeToken(token);
 
                     router.replace("/dashboard");
-
                 } else {
-                    showTopSnackbar("User type not found. Cannot continue.");
+                    showTopSnackbar("User type or token not found. Cannot continue.");
                 }
             } else {
                 const errorMessage = data.message || "Invalid email or password";

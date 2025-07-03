@@ -14,7 +14,7 @@ import navItems from "../lib/config/navItems";
 
 const TopNavBar = () => {
     const [menuVisible, setMenuVisible] = useState(false);
-    const { userType, theme, setTheme } = useGlobalInfo();
+    const { userType, theme, setTheme, changeEvent } = useGlobalInfo();
     const router = useRouter();
     const items = navItems[userType] || [];
     const colors = Colors[theme];
@@ -63,6 +63,7 @@ const TopNavBar = () => {
                                 style={styles.menuItem}
                                 onPress={() => {
                                     setMenuVisible(false);
+                                    changeEvent(null);
                                     router.push(item.path);
                                 }}
                             >
