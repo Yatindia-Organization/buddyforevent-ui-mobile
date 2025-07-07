@@ -17,6 +17,7 @@ export default function EventLayout() {
         { name: "Single Registration", path: `/event-dashboard/${eventId}/single-registration` },
         { name: "View Participants", path: `/event-dashboard/${eventId}/view-participants` },
         { name: "Payment History", path: `/event-dashboard/${eventId}/payment-history` },
+        { name: "Feedback", path: `/event-dashboard/${eventId}/view-feedback` },
         { name: "Poll", path: `/event-dashboard/${eventId}/poll` },
         { name: "Email/Message", path: `/event-dashboard/${eventId}/email-message` },
         { name: "Reports", path: `/event-dashboard/${eventId}/reports` },

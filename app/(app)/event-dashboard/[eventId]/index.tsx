@@ -460,6 +460,12 @@ import { API_ROUTE } from '../../../../lib/config';
 const { width } = Dimensions.get('window');
 const MAX_EVENT_NAME_WIDTH = width - 130;
 
+interface UrlItem {
+    label: string;
+    path: string;
+}
+
+
 export default function Event() {
     const context = useGlobalInfo();
     const { theme } = context;
@@ -484,6 +490,26 @@ export default function Event() {
     // Event Status Dropdown
     const [statusMenuVisible, setStatusMenuVisible] = useState(false);
     const [eventStatus, setEventStatus] = useState("");
+
+    const liveCountPath = `live-count/${id}`;
+    const urlList: UrlItem[] = [
+        { label: "Live Count", path: liveCountPath },
+        { label: "Event Feedback", path: `feedback-entry/${id}` },
+        { label: "Live Poll", path: `event/${id}/polls` },
+    ];
+
+    function formatDate(isoDate: string): string {
+        if (!isoDate) return "";
+        const d = new Date(isoDate);
+        const year = d.getFullYear();
+        const month = (d.getMonth() + 1).toString().padStart(2, "0");
+        const day = d.getDate().toString().padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    }
+
+    function getFullUrl(API_FRONTEND: string, path: string) {
+        return `${API_FRONTEND}/${path}`;
+    }
 
     useEffect(() => {
         const fetchEvent = async () => {
@@ -549,7 +575,6 @@ export default function Event() {
             showSnackbar(err.message || 'Failed to delete event', 'error');
         }
     };
-
 
     const handlePollSubmit = async () => {
         const validOptions = poll.options.filter(opt => opt.trim() !== '');
@@ -719,12 +744,31 @@ export default function Event() {
                     </View>
 
                     {/* Links (Shareable, Live, Feedback, Poll) */}
-                    {['Shareable Link URL', 'Live Count URL', 'Event Feedback URL', 'Live Poll URL'].map((label, idx) => (
+                    {/* {['Shareable Link URL', 'Live Count URL', 'Event Feedback URL', 'Live Poll URL'].map((label, idx) => (
                         <View key={idx} style={styles.urlRow}>
                             <Text style={[styles.urlLabel, { color: colors.text }]}>{label}</Text>
                             <Text style={[styles.urlValue, { color: colors.button }]} numberOfLines={1}>https://in.explara.com/e/abc-event-oejqyfepdf92ob5</Text>
                         </View>
-                    ))}
+                    ))} */}
+
+                    <View style={[styles.card, { backgroundColor: colors.card }]}>
+                        {urlList.map(({ label, path }) => {
+                            return (
+                                <View key={label} style={styles.urlRow}>
+                                    <Text style={[styles.urlLabel, { color: colors.text }]}>
+                                        {label} URL
+                                    </Text>
+                                    <Text
+                                        style={[styles.urlValue, { color: colors.button }]}
+                                        numberOfLines={1}
+                                        ellipsizeMode="tail"
+                                    >
+                                        {getFullUrl(API_ROUTE, path)}
+                                    </Text>
+                                </View>
+                            );
+                        })}
+                    </View>
 
                     {/* Event Logo */}
                     <View style={styles.logoContainer}>
@@ -745,10 +789,10 @@ export default function Event() {
                         <Text style={{ color: colors.text }}>📍 {event.location || "Location not provided"}</Text>
                     </View>
                     <View style={styles.overviewRow}>
-                        <Text style={{ color: colors.text }}>📅 {event.start_date}</Text>
+                        <Text style={{ color: colors.text }}>📅 {formatDate(event.start_date)} - {formatDate(event.start_date)}</Text>
                     </View>
                     <View style={styles.overviewRow}>
-                        <Text style={{ color: colors.text }}>⏰ {event.start_time}</Text>
+                        <Text style={{ color: colors.text }}>⏰ {event.start_time} - {event.end_time}</Text>
                     </View>
 
                     {/* Event Images Carousel */}
