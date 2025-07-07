@@ -635,131 +635,138 @@ export default function Participants() {
                     </View>
 
                     {/* Table header */}
-                    <View style={[
-                        styles.tableHeader,
-                        { backgroundColor: colors.dropdownBackground, borderColor: colors.secondaryText }
-                    ]}>
-                        {schema.fields.map(f => (
-                            <Text key={f.id} style={[styles.tableCellHeader, { color: colors.text }]}>
-                                {f.label}
-                            </Text>
-                        ))}
-                        <Text style={[styles.tableCellHeader, { color: colors.text }]}>Visitors</Text>
-                        <Text style={[styles.tableCellHeader, { color: colors.text }]}>Entry Time</Text>
-                        <Text style={[styles.tableCellHeader, { color: colors.text }]}>Exit Time</Text>
-                        <Text style={[styles.tableCellHeader, { color: colors.text }]}>Gift</Text>
-                        <Text style={[styles.tableCellHeader, { color: colors.text }]}>Food</Text>
-                        {/* (QR code column skipped for mobile UI simplicity) */}
-                    </View>
 
-                    {loading ? (
-                        <View style={{ padding: 32, alignItems: 'center' }}>
-                            <ActivityIndicator color={colors.button} />
-                        </View>
-                    ) : (
-                        filtered.map((row, idx) => (
-                            <View key={row._id || idx} style={[
-                                styles.tableRow,
-                                { borderColor: colors.dropdownBackground }
+                    <View style={{ height: 560 }}>
+                        <ScrollView>
+
+                            <View style={[
+                                styles.tableHeader,
+                                { backgroundColor: colors.dropdownBackground, borderColor: colors.secondaryText }
                             ]}>
-                                {schema.fields.map(f => {
-                                    // logic as in renderValue
-                                    const resp = row.responses?.find(r => r.fieldId === f.id);
-                                    let val = resp?.value ?? '';
-                                    if (typeof val === 'boolean') val = val ? 'YES' : 'NO';
-                                    else if (val && typeof val === 'object') {
-                                        const { text, hyperlink } = val;
-                                        if (text && hyperlink) val = text;
-                                        else val = JSON.stringify(val);
-                                    }
-                                    return (
-                                        <Text key={f.id} style={[styles.tableCell, { color: colors.text }]}>
-                                            {val}
-                                        </Text>
-                                    );
-                                })}
-                                <Text style={[styles.tableCell, { color: colors.text }]}>
-                                    {row.visitorCount ?? 0}
-                                </Text>
-                                <Text style={[styles.tableCell, { color: colors.secondaryText }]}>
-                                    {row.entryTime?.length
-                                        ? new Date(row.entryTime[0]).toLocaleTimeString()
-                                        : '—'}
-                                </Text>
-                                <Text style={[styles.tableCell, { color: colors.secondaryText }]}>
-                                    {row.exitTime?.length
-                                        ? new Date(row.exitTime[0]).toLocaleTimeString()
-                                        : '—'}
-                                </Text>
-                                <Text style={[
-                                    styles.tableCell,
-                                    {
-                                        color: row.gift == null
-                                            ? colors.secondaryText
-                                            : row.gift
-                                                ? colors.button
-                                                : colors.cancelButton,
-                                        fontWeight: 'bold'
-                                    }
-                                ]}>
-                                    {row.gift == null ? '—' : row.gift ? 'YES' : 'NO'}
-                                </Text>
-                                <Text style={[
-                                    styles.tableCell,
-                                    {
-                                        color: row.food == null
-                                            ? colors.secondaryText
-                                            : row.food
-                                                ? colors.button
-                                                : colors.cancelButton,
-                                        fontWeight: 'bold'
-                                    }
-                                ]}>
-                                    {row.food == null ? '—' : row.food ? 'YES' : 'NO'}
-                                </Text>
+                                {schema.fields.map(f => (
+                                    <Text key={f.id} style={[styles.tableCellHeader, { color: colors.text }]}>
+                                        {f.label}
+                                    </Text>
+                                ))}
+                                <Text style={[styles.tableCellHeader, { color: colors.text }]}>Visitors</Text>
+                                <Text style={[styles.tableCellHeader, { color: colors.text }]}>Entry Time</Text>
+                                <Text style={[styles.tableCellHeader, { color: colors.text }]}>Exit Time</Text>
+                                <Text style={[styles.tableCellHeader, { color: colors.text }]}>Gift</Text>
+                                <Text style={[styles.tableCellHeader, { color: colors.text }]}>Food</Text>
+                                {/* (QR code column skipped for mobile UI simplicity) */}
                             </View>
-                        ))
-                    )}
 
-                    {/* Pagination */}
-                    <View style={styles.pagination}>
-                        <TouchableOpacity
-                            disabled={page === 1}
-                            onPress={() => setPage(prev => Math.max(prev - 1, 1))}
-                        >
-                            <Text style={[styles.pageBtn, { color: colors.button, opacity: page === 1 ? 0.5 : 1 }]}>Prev</Text>
-                        </TouchableOpacity>
-                        <Text style={[styles.pageLabel, { color: colors.text }]}>Page {page} of {totalPages}</Text>
-                        <TouchableOpacity
-                            disabled={page >= totalPages}
-                            onPress={() => setPage(prev => Math.min(prev + 1, totalPages))}
-                        >
-                            <Text
-                                style={[
-                                    styles.pageBtn,
-                                    {
-                                        color: colors.button,
-                                        opacity: page >= totalPages ? 0.5 : 1,
-                                    },
-                                ]}
-                            >
-                                Next
-                            </Text>
-                        </TouchableOpacity>
-                        {/* Rows per page */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 10 }}>
-                            <Text style={{ color: colors.secondaryText }}>Rows:</Text>
-                            {[10, 25, 50].map(n => (
-                                <TouchableOpacity key={n} onPress={() => { setRowsPerPage(n); setPage(1); }}>
-                                    <Text style={[
-                                        { marginHorizontal: 4, color: n === rowsPerPage ? colors.button : colors.text }
+                            {loading ? (
+                                <View style={{ padding: 32, alignItems: 'center' }}>
+                                    <ActivityIndicator color={colors.button} />
+                                </View>
+                            ) : (
+                                filtered.map((row, idx) => (
+                                    <View key={row._id || idx} style={[
+                                        styles.tableRow,
+                                        { borderColor: colors.dropdownBackground }
                                     ]}>
-                                        {n}
+                                        {schema.fields.map(f => {
+                                            // logic as in renderValue
+                                            const resp = row.responses?.find(r => r.fieldId === f.id);
+                                            let val = resp?.value ?? '';
+                                            if (typeof val === 'boolean') val = val ? 'YES' : 'NO';
+                                            else if (val && typeof val === 'object') {
+                                                const { text, hyperlink } = val;
+                                                if (text && hyperlink) val = text;
+                                                else val = JSON.stringify(val);
+                                            }
+                                            return (
+                                                <Text key={f.id} style={[styles.tableCell, { color: colors.text }]}>
+                                                    {val}
+                                                </Text>
+                                            );
+                                        })}
+                                        <Text style={[styles.tableCell, { color: colors.text }]}>
+                                            {row.visitorCount ?? 0}
+                                        </Text>
+                                        <Text style={[styles.tableCell, { color: colors.secondaryText }]}>
+                                            {row.entryTime?.length
+                                                ? new Date(row.entryTime[0]).toLocaleTimeString()
+                                                : '—'}
+                                        </Text>
+                                        <Text style={[styles.tableCell, { color: colors.secondaryText }]}>
+                                            {row.exitTime?.length
+                                                ? new Date(row.exitTime[0]).toLocaleTimeString()
+                                                : '—'}
+                                        </Text>
+                                        <Text style={[
+                                            styles.tableCell,
+                                            {
+                                                color: row.gift == null
+                                                    ? colors.secondaryText
+                                                    : row.gift
+                                                        ? colors.button
+                                                        : colors.cancelButton,
+                                                fontWeight: 'bold'
+                                            }
+                                        ]}>
+                                            {row.gift == null ? '—' : row.gift ? 'YES' : 'NO'}
+                                        </Text>
+                                        <Text style={[
+                                            styles.tableCell,
+                                            {
+                                                color: row.food == null
+                                                    ? colors.secondaryText
+                                                    : row.food
+                                                        ? colors.button
+                                                        : colors.cancelButton,
+                                                fontWeight: 'bold'
+                                            }
+                                        ]}>
+                                            {row.food == null ? '—' : row.food ? 'YES' : 'NO'}
+                                        </Text>
+                                    </View>
+                                ))
+                            )}
+
+                            {/* Pagination */}
+                            <View style={styles.pagination}>
+                                <TouchableOpacity
+                                    disabled={page === 1}
+                                    onPress={() => setPage(prev => Math.max(prev - 1, 1))}
+                                >
+                                    <Text style={[styles.pageBtn, { color: colors.button, opacity: page === 1 ? 0.5 : 1 }]}>Prev</Text>
+                                </TouchableOpacity>
+                                <Text style={[styles.pageLabel, { color: colors.text }]}>Page {page} of {totalPages}</Text>
+                                <TouchableOpacity
+                                    disabled={page >= totalPages}
+                                    onPress={() => setPage(prev => Math.min(prev + 1, totalPages))}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.pageBtn,
+                                            {
+                                                color: colors.button,
+                                                opacity: page >= totalPages ? 0.5 : 1,
+                                            },
+                                        ]}
+                                    >
+                                        Next
                                     </Text>
                                 </TouchableOpacity>
-                            ))}
-                        </View>
+                                {/* Rows per page */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 10 }}>
+                                    <Text style={{ color: colors.secondaryText }}>Rows:</Text>
+                                    {[10, 25, 50].map(n => (
+                                        <TouchableOpacity key={n} onPress={() => { setRowsPerPage(n); setPage(1); }}>
+                                            <Text style={[
+                                                { marginHorizontal: 4, color: n === rowsPerPage ? colors.button : colors.text }
+                                            ]}>
+                                                {n}
+                                            </Text>
+                                        </TouchableOpacity>
+                                    ))}
+                                </View>
+                            </View>
+                        </ScrollView>
                     </View>
+
                 </>
             )}
         </ScrollView>

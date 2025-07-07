@@ -18,6 +18,13 @@ const Dashboard = () => {
     const rowsPerPage = 5;
     const router = useRouter();
 
+    const stats = [
+        ['Events completed', events?.filter(e => e.status === 'completed').length],
+        ['Total Events', events?.length],
+        ['Total Registration', events?.reduce((sum, e) => sum + (e.registrations || 0), 0)],
+        ['Total Participants', events?.reduce((sum, e) => sum + (e.participants || 0), 0)],
+    ];
+
     const eventPayload: any[] = [{
         cover_image: "https://res.cloudinary.com/dovrpnbxe/image/upload/v1747848227/cx1sxhgj7qigcsbh61gc.jpg",
         description: "This is the static description",
@@ -71,11 +78,14 @@ const Dashboard = () => {
     return (
         <ScrollView contentContainerStyle={[styles.container, { backgroundColor: colors.background }]}>
             {/* Top Cards */}
+
             <View style={styles.cardContainer}>
-                <StatCard label="Events Completed" value="12" backgroundColor={colors.dropdownBackground} textColor={colors.text} />
-                <StatCard label="Total Events" value="21" backgroundColor={colors.dropdownBackground} textColor={colors.text} />
-                <StatCard label="Total Registration" value="22" backgroundColor={colors.dropdownBackground} textColor={colors.text} />
-                <StatCard label="Total Participants" value="225" backgroundColor={colors.dropdownBackground} textColor={colors.text} />
+                {stats.map(([label, value]) => (
+                    <View style={[styles.statCard, { backgroundColor: colors.dropdownBackground }]} key={label}>
+                        <Text style={[styles.statLabel, { color: colors.text }]}>{label}</Text>
+                        <Text style={[styles.statValue, { color: colors.text }]}>{value}</Text>
+                    </View>
+                ))}
             </View>
 
             {/* Event List */}
@@ -124,12 +134,6 @@ const Dashboard = () => {
     );
 };
 
-const StatCard = ({ label, value, backgroundColor, textColor }) => (
-    <View style={[styles.statCard, { backgroundColor }]}>
-        <Text style={[styles.statLabel, { color: textColor }]}>{label}</Text>
-        <Text style={[styles.statValue, { color: textColor }]}>{value}</Text>
-    </View>
-);
 
 const styles = StyleSheet.create({
     container: {

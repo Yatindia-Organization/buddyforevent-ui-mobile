@@ -12,6 +12,7 @@ import {
     View
 } from 'react-native';
 import { Snackbar } from 'react-native-paper';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Colors } from '../../../../constants/Colors';
 import { useGlobalInfo } from '../../../../context/GlobalContext';
 import { API_ROUTE } from '../../../../lib/config';
@@ -143,168 +144,200 @@ export default function Report() {
     const numColumns = 3;
     const cardWidth = (screenWidth - (numColumns + 1) * gridSpacing - 32) / numColumns;
 
-    const renderSummaryGrid = (metrics) => {
+    const renderSummaryGrid = (metrics: Record<string, any>) => {
         const entries = Object.entries(metrics);
-        const rows = [];
-        for (let i = 0; i < entries.length; i += 3) {
-            const row = entries.slice(i, i + 3);
+        const rows: [string, any][][] = [];
+        const numColumns = 3;
+        for (let i = 0; i < entries.length; i += numColumns) {
+            const row = entries.slice(i, i + numColumns);
             rows.push(row);
         }
+
         return (
             <View style={styles.summaryGridWrap}>
-                {rows.map((row, rowIdx) => (
-                    <View style={styles.summaryGridRow} key={rowIdx}>
-                        {row.map(([k, v], idx) => (
-                            <View
-                                key={k}
-                                style={[
-                                    styles.metricCard,
-                                    {
-                                        backgroundColor: colors.card,
-                                        width: cardWidth,
-                                        marginRight: idx < numColumns - 1 ? gridSpacing : 0,
-                                    }
-                                ]}
-                            >
-                                <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>
-                                    {k.replace(/([A-Z])/g, ' $1').toUpperCase()}
-                                </Text>
-                                <Text style={[styles.metricValue, { color: colors.button }]}>
-                                    {v ?? '—'}
-                                </Text>
-                            </View>
-                        ))}
-                        {row.length < 3 &&
-                            Array.from({ length: 3 - row.length }).map((_, i) => (
-                                <View key={`empty-${i}`} style={{ width: cardWidth, marginRight: i < 2 ? gridSpacing : 0 }} />
+                {rows.map((row, rowIdx) => {
+                    const isLastRow = rowIdx === rows.length - 1;
+                    const isFullRow = row.length === numColumns;
+                    let cardStyle;
+                    if (!isFullRow && isLastRow) {
+                        // For last row: 2 items = 1/2 width, 1 item = full width
+                        cardStyle = (idx: number) =>
+                            row.length === 2
+                                ? {
+                                    width: "48%",
+                                    marginRight: idx === 0 ? "4%" : 0, // gap between two cards
+                                }
+                                : {
+                                    width: "100%",
+                                };
+                    } else {
+                        // Normal row of 3 columns
+                        cardStyle = (idx: number) => ({
+                            width: cardWidth, // your existing 3-col width
+                            marginRight: idx < numColumns - 1 ? gridSpacing : 0,
+                        });
+                    }
+                    return (
+                        <View style={styles.summaryGridRow} key={rowIdx}>
+                            {row.map(([k, v], idx) => (
+                                <View
+                                    key={k}
+                                    style={[
+                                        styles.metricCard,
+                                        { backgroundColor: colors.card },
+                                        cardStyle(idx)
+                                    ]}
+                                >
+                                    <Text style={[styles.metricLabel, { color: colors.secondaryText }]}>
+                                        {k.replace(/([A-Z])/g, ' $1').toUpperCase()}
+                                    </Text>
+                                    <Text style={[styles.metricValue, { color: colors.button }]}>
+                                        {v ?? '—'}
+                                    </Text>
+                                </View>
                             ))}
-                    </View>
-                ))}
+                        </View>
+                    );
+                })}
             </View>
         );
     };
 
     return (
-        <ScrollView style={{ backgroundColor: colors.background }}>
-            {loading && (
-                <View style={{ padding: 24, alignItems: 'center', justifyContent: 'center' }}>
-                    <ActivityIndicator color={colors.button} size="large" />
-                    <Text style={{ color: colors.text, marginTop: 12 }}>Loading...</Text>
-                </View>
-            )}
-
-            <View style={{ padding: 16 }}>
-                <Text style={[styles.title, { color: colors.button }]}>EVENT REPORT</Text>
-
-                {/* Download Button */}
-                <TouchableOpacity
-                    style={[styles.downloadBtn, { backgroundColor: colors.button, opacity: downloading ? 0.7 : 1 }]}
-                    onPress={handleExcelDownload}
-                    disabled={downloading}
-                >
-                    <Text style={{ color: colors.buttonText, fontWeight: 'bold', textAlign: 'center' }}>
-                        {downloading ? 'DOWNLOADING...' : 'DOWNLOAD AS EXCEL'}
-                    </Text>
-                </TouchableOpacity>
-
-                {/* Summary Metrics Grid */}
-                {summary && (
-                    <View style={[styles.paper, { backgroundColor: 'transparent', elevation: 0 }]}>
-                        <Text style={[styles.subtitle, { color: colors.text }]}>SUMMARY</Text>
-                        {renderSummaryGrid(summary.metrics)}
-                    </View>
-                )}
-
-                {/* Ticket Tiers */}
-                {summary?.ticketTiers?.length > 0 && (
-                    <View style={[styles.paper, { backgroundColor: colors.card }]}>
-                        <Text style={[styles.subtitle, { color: colors.text }]}>TICKET TIERS</Text>
-                        <ScrollView horizontal style={{ marginBottom: 8 }}>
-                            <View>
-                                <View style={[styles.tableRow, styles.tableHeaderRow, { backgroundColor: colors.dropdownBackground }]}>
-                                    <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>NAME</Text>
-                                    <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>PRICE</Text>
-                                    <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>CAPACITY</Text>
-                                    <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>PERKS</Text>
-                                </View>
-                                {summary.ticketTiers.map((t, i) => (
-                                    <View key={i} style={styles.tableRow}>
-                                        <Text style={[styles.tableCell, { color: colors.text }]}>{t.name.toUpperCase()}</Text>
-                                        <Text style={[styles.tableCell, { color: colors.text }]}>{t.price}</Text>
-                                        <Text style={[styles.tableCell, { color: colors.text }]}>{t.capacity}</Text>
-                                        <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{t.perks.join(', ').toUpperCase()}</Text>
-                                    </View>
-                                ))}
-                            </View>
-                        </ScrollView>
-                    </View>
-                )}
-
-                {/* Submissions Table */}
-                <ScrollView horizontal style={{ marginBottom: 24 }}>
-                    <View>
-                        <View style={[styles.tableRow, styles.tableHeaderRow, { backgroundColor: colors.dropdownBackground }]}>
-                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>TIER</Text>
-                            {summary?.formSchema.map(f => (
-                                <Text key={f.id} style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>
-                                    {f.label.toUpperCase()}
-                                </Text>
-                            ))}
-                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>VISITORS</Text>
-                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>ENTRY TIMES</Text>
-                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>EXIT TIMES</Text>
-                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>FOOD</Text>
-                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>FOOD TIMES</Text>
-                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>GIFT</Text>
-                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>GIFT TIMES</Text>
-                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>SUBMITTED AT</Text>
+        <SafeAreaProvider>
+            <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+                <ScrollView style={{ backgroundColor: colors.background }}>
+                    {loading && (
+                        <View style={{ padding: 24, alignItems: 'center', justifyContent: 'center' }}>
+                            <ActivityIndicator color={colors.button} size="large" />
+                            <Text style={{ color: colors.text, marginTop: 12 }}>Loading...</Text>
                         </View>
-                        {submissions.map(sub => (
-                            <View key={sub._id} style={styles.tableRow}>
-                                <Text style={[styles.tableCell, { color: colors.text }]}>{ticketMap[sub._id] || '—'}</Text>
-                                {summary.formSchema.map(fld => {
-                                    const resp = sub.responses.find(r => r.fieldId === fld.id);
-                                    return (
-                                        <Text key={fld.id} style={[styles.tableCell, { color: colors.text }]}>
-                                            {renderCell(resp?.value)}
-                                        </Text>
-                                    );
-                                })}
-                                <Text style={[styles.tableCell, { color: colors.text }]}>{displayVal(sub.visitorCount)}</Text>
-                                <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.entryTime)}</Text>
-                                <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.exitTime)}</Text>
-                                <Text style={[styles.tableCell, { color: colors.button }]}>{displayVal(sub.food)}</Text>
-                                <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.foodTime)}</Text>
-                                <Text style={[styles.tableCell, { color: colors.button }]}>{displayVal(sub.gift)}</Text>
-                                <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.giftTime)}</Text>
-                                <Text style={[styles.tableCell, { color: colors.text }]}>{displayVal(sub.submittedAt)}</Text>
-                            </View>
-                        ))}
-                        {!loading && submissions.length === 0 && (
-                            <View style={styles.tableRow}>
-                                <Text style={[styles.tableCell, { color: colors.cancelButton, textAlign: 'center', flex: 1 }]}>
-                                    NO SUBMISSIONS
-                                </Text>
+                    )}
+
+                    <View style={{ padding: 16 }}>
+                        <Text style={[styles.title, { color: colors.button }]}>EVENT REPORT</Text>
+
+                        {/* Download Button */}
+                        <TouchableOpacity
+                            style={[styles.downloadBtn, { backgroundColor: colors.button, opacity: downloading ? 0.7 : 1 }]}
+                            onPress={handleExcelDownload}
+                            disabled={downloading}
+                        >
+                            <Text style={{ color: colors.buttonText, fontWeight: 'bold', textAlign: 'center' }}>
+                                {downloading ? 'DOWNLOADING...' : 'DOWNLOAD AS EXCEL'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* Summary Metrics Grid */}
+                        {summary && (
+                            <View style={[styles.paper, { backgroundColor: 'transparent', elevation: 0 }]}>
+                                <Text style={[styles.subtitle, { color: colors.text }]}>SUMMARY</Text>
+                                {renderSummaryGrid(summary.metrics)}
                             </View>
                         )}
-                    </View>
-                </ScrollView>
-            </View>
 
-            {/* Snackbar */}
-            <Snackbar
-                visible={snackbar.visible}
-                onDismiss={() => setSnackbar((s) => ({ ...s, visible: false }))}
-                duration={3500}
-                style={{ backgroundColor: snackbar.severity === 'error' ? colors.cancelButton : colors.button }}
-            >
-                <Text style={{ color: colors.buttonText }}>{snackbar.message}</Text>
-            </Snackbar>
-        </ScrollView>
+                        {/* Ticket Tiers */}
+                        {summary?.ticketTiers?.length > 0 && (
+                            <View style={[styles.paper, { backgroundColor: colors.card }]}>
+                                <Text style={[styles.subtitle, { color: colors.text }]}>TICKET TIERS</Text>
+                                <ScrollView horizontal style={{ marginBottom: 8 }}>
+                                    <View>
+                                        <View style={[styles.tableRow, styles.tableHeaderRow, { backgroundColor: colors.dropdownBackground }]}>
+                                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>NAME</Text>
+                                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>PRICE</Text>
+                                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>CAPACITY</Text>
+                                            <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>PERKS</Text>
+                                        </View>
+                                        {summary.ticketTiers.map((t, i) => (
+                                            <View key={i} style={styles.tableRow}>
+                                                <Text style={[styles.tableCell, { color: colors.text }]}>{t.name.toUpperCase()}</Text>
+                                                <Text style={[styles.tableCell, { color: colors.text }]}>{t.price}</Text>
+                                                <Text style={[styles.tableCell, { color: colors.text }]}>{t.capacity}</Text>
+                                                <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{t.perks.join(', ').toUpperCase()}</Text>
+                                            </View>
+                                        ))}
+                                    </View>
+                                </ScrollView>
+                            </View>
+                        )}
+
+                        {/* Submissions Table */}
+                        {/* Submissions Table (rewritten) */}
+                        <View style={{ marginBottom: 24, maxHeight: 350 }}>
+
+                            {/* Table Header (sticky, not scrolling vertically) */}
+                            <View style={[styles.tableRow, styles.tableHeaderRow, { backgroundColor: colors.dropdownBackground }]}>
+                                <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>TIER</Text>
+                                {summary?.formSchema.map(f => (
+                                    <Text key={f.id} style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>
+                                        {f.label.toUpperCase()}
+                                    </Text>
+                                ))}
+                                <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>VISITORS</Text>
+                                <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>ENTRY TIMES</Text>
+                                <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>EXIT TIMES</Text>
+                                <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>FOOD</Text>
+                                <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>FOOD TIMES</Text>
+                                <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>GIFT</Text>
+                                <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>GIFT TIMES</Text>
+                                <Text style={[styles.tableCell, styles.headerCell, { color: colors.text }]}>SUBMITTED AT</Text>
+                            </View>
+
+                            {/* Table Body: scrollable vertically only */}
+                            <ScrollView style={{ maxHeight: 300 }}>
+                                {submissions.map(sub => (
+                                    <View key={sub._id} style={styles.tableRow}>
+                                        <Text style={[styles.tableCell, { color: colors.text }]}>{ticketMap[sub._id] || '—'}</Text>
+                                        {summary.formSchema.map(fld => {
+                                            const resp = sub.responses.find(r => r.fieldId === fld.id);
+                                            return (
+                                                <Text key={fld.id} style={[styles.tableCell, { color: colors.text }]}>
+                                                    {renderCell(resp?.value)}
+                                                </Text>
+                                            );
+                                        })}
+                                        <Text style={[styles.tableCell, { color: colors.text }]}>{displayVal(sub.visitorCount)}</Text>
+                                        <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.entryTime)}</Text>
+                                        <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.exitTime)}</Text>
+                                        <Text style={[styles.tableCell, { color: colors.button }]}>{displayVal(sub.food)}</Text>
+                                        <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.foodTime)}</Text>
+                                        <Text style={[styles.tableCell, { color: colors.button }]}>{displayVal(sub.gift)}</Text>
+                                        <Text style={[styles.tableCell, { color: colors.secondaryText }]}>{renderCell(sub.giftTime)}</Text>
+                                        <Text style={[styles.tableCell, { color: colors.text }]}>{displayVal(sub.submittedAt)}</Text>
+                                    </View>
+                                ))}
+                                {!loading && submissions.length === 0 && (
+                                    <View style={styles.tableRow}>
+                                        <Text style={[styles.tableCell, { color: colors.cancelButton, textAlign: 'center', flex: 1 }]}>
+                                            NO SUBMISSIONS
+                                        </Text>
+                                    </View>
+                                )}
+                            </ScrollView>
+
+                        </View>
+                    </View>
+
+                    {/* Snackbar */}
+                    <Snackbar
+                        visible={snackbar.visible}
+                        onDismiss={() => setSnackbar((s) => ({ ...s, visible: false }))}
+                        duration={3500}
+                        style={{ backgroundColor: snackbar.severity === 'error' ? colors.cancelButton : colors.button }}
+                    >
+                        <Text style={{ color: colors.buttonText }}>{snackbar.message}</Text>
+                    </Snackbar>
+                </ScrollView>
+            </SafeAreaView>
+        </SafeAreaProvider>
     );
 }
 
 const styles = StyleSheet.create({
+    container: {
+        minHeight: 740,
+        paddingVertical: 20,
+    },
     title: {
         fontWeight: 'bold',
         fontSize: 22,
